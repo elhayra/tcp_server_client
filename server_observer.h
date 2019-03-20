@@ -1,9 +1,4 @@
-/*
- * server_observer.h
- *
- *  Created on: Mar 17, 2019
- *      Author: erauper
- */
+
 
 #ifndef SERVER_OBSERVER_H_
 #define SERVER_OBSERVER_H_

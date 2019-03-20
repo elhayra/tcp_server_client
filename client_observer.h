@@ -1,9 +1,4 @@
-/*
- * client_observer.h
- *
- *  Created on: Mar 17, 2019
- *      Author: erauper
- */
+
 
 #ifndef CLIENT_OBSERVER_H_
 #define CLIENT_OBSERVER_H_

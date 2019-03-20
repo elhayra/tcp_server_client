@@ -1,9 +1,3 @@
-/*
- * tcp_ret.h
- *
- *  Created on: Mar 17, 2019
- *      Author: erauper
- */
 
 #ifndef TCP_RET_H_
 #define TCP_RET_H_

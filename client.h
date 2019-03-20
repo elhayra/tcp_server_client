@@ -1,10 +1,3 @@
-/*
- * client.h
- *
- *  Created on: Mar 14, 2019
- *      Author: erauper
- */
-
 
 
 #ifndef CLIENT_H_

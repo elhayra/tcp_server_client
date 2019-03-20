@@ -8,3 +8,7 @@ Both server and client are very easy to use. You can find code example of using 
 The code is documented, so I hope you find it easy to change it to suit your needs if needed to.
 
 The server class supports multiple clients.
+
+### Compilation
+1. Add pthread library flag
+2. If you compile the code with both the example files, comment one of the "main" functions out
