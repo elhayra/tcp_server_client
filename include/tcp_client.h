@@ -1,5 +1,10 @@
-#ifndef TCP_CLIENT_H
-#define TCP_CLIENT_H
+//
+// Created by erauper on 4/7/19.
+//
+
+#ifndef INTERCOM_TCP_CLIENT_H
+#define INTERCOM_TCP_CLIENT_H
+
 
 #include <iostream>
 #include <stdio.h>
@@ -14,9 +19,9 @@
 #include <netdb.h>
 #include <vector>
 #include <errno.h>
-#include <pthread.h>
+#include <thread>
 #include "client_observer.h"
-#include "tcp_ret.h"
+#include "pipe_ret_t.h"
 
 #define MAX_PACKET_SIZE 4096
 
@@ -27,23 +32,23 @@
 
 class TcpClient
 {
-  private:
+private:
     int m_sockfd;
     bool stop;
     struct sockaddr_in m_server;
     std::vector<client_observer_t> m_subscibers;
 
-	void publishServerMsg(const char * msg, size_t msgSize);
-	void publishServerDisconnected(const tcp_ret_t & ret);
+    void publishServerMsg(const char * msg, size_t msgSize);
+    void publishServerDisconnected(const pipe_ret_t & ret);
     static void * ReceiveTask(void * context);
 
-  public:
-    tcp_ret_t connectTo(const std::string & address, int port);
-    tcp_ret_t sendMsg(const char * msg, size_t size);
-	void subscribe(const client_observer_t & observer);
-	void unsubscribeAll();
+public:
+    pipe_ret_t connectTo(const std::string & address, int port);
+    pipe_ret_t sendMsg(const char * msg, size_t size);
+    void subscribe(const client_observer_t & observer);
+    void unsubscribeAll();
     void publish(const char * msg, size_t msgSize);
-    tcp_ret_t finish();
+    pipe_ret_t finish();
 };
 
-#endif
+#endif //INTERCOM_TCP_CLIENT_H

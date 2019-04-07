@@ -1,16 +1,15 @@
 
 
-#ifndef SERVER_OBSERVER_H_
-#define SERVER_OBSERVER_H_
-
+#ifndef INTERCOM_SERVER_OBSERVER_H
+#define INTERCOM_SERVER_OBSERVER_H
 
 #include <string>
 #include "client.h"
 
-typedef void (incoming_packet_func)(const client_t & client, const char * msg, size_t size);
+typedef void (incoming_packet_func)(const Client & client, const char * msg, size_t size);
 typedef incoming_packet_func* incoming_packet_func_t;
 
-typedef void (disconnected_func)(const client_t & client);
+typedef void (disconnected_func)(const Client & client);
 typedef disconnected_func* disconnected_func_t;
 
 struct server_observer_t {
@@ -26,4 +25,4 @@ struct server_observer_t {
 	}
 };
 
-#endif /* SERVER_OBSERVER_H_ */
+#endif //INTERCOM_SERVER_OBSERVER_H
