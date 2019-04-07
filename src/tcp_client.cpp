@@ -36,7 +36,7 @@ pipe_ret_t TcpClient::connectTo(const std::string & address, int port) {
         ret.msg = strerror(errno);
         return ret;
     }
-    std::thread threadHandle(&TcpClient::ReceiveTask, this);
+    m_receiveTask = new std::thread(&TcpClient::ReceiveTask, this);
     ret.success = true;
     return ret;
 }
@@ -100,33 +100,32 @@ void TcpClient::publishServerDisconnected(const pipe_ret_t & ret) {
 /*
  * Receive server packets, and notify user
  */
-void* TcpClient::ReceiveTask(void *context) {
+void TcpClient::ReceiveTask() {
 
-    pipe_ret_t ret;
-    TcpClient * clientInstance = (TcpClient *)context;
-
-    while(!clientInstance->stop) {
+    while(!stop) {
         char msg[MAX_PACKET_SIZE];
-        int numOfBytesReceived = recv(clientInstance->m_sockfd, msg, MAX_PACKET_SIZE, 0);
+        int numOfBytesReceived = recv(m_sockfd, msg, MAX_PACKET_SIZE, 0);
         if(numOfBytesReceived < 1) {
+            pipe_ret_t ret;
             ret.success = false;
-            clientInstance->stop = true;
+            stop = true;
             if (numOfBytesReceived == 0) { //server closed connection
-                ret.msg = "Client closed connection";
+                ret.msg = "Server closed connection";
             } else {
                 ret.msg = strerror(errno);
             }
-            clientInstance->publishServerDisconnected(ret);
-            clientInstance->finish();
+            publishServerDisconnected(ret);
+            finish();
             break;
         } else {
-            clientInstance->publishServerMsg(msg, numOfBytesReceived);
+            publishServerMsg(msg, numOfBytesReceived);
         }
     }
-    return NULL;
 }
 
 pipe_ret_t TcpClient::finish(){
+    stop = true;
+    terminateReceiveThread();
     pipe_ret_t ret;
     if (close(m_sockfd) == -1) { // close failed
         ret.success = false;
@@ -135,4 +134,16 @@ pipe_ret_t TcpClient::finish(){
     }
     ret.success = true;
     return ret;
+}
+
+void TcpClient::terminateReceiveThread() {
+    if (m_receiveTask != nullptr) {
+        m_receiveTask->detach();
+        delete m_receiveTask;
+        m_receiveTask = nullptr;
+    }
+}
+
+TcpClient::~TcpClient() {
+    terminateReceiveThread();
 }
