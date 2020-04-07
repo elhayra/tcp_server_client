@@ -32,7 +32,7 @@ public:
     void setConnected() { m_isConnected = true; }
 
     void setDisconnected() { m_isConnected = false; }
-    bool isConnected() { m_isConnected = true; }
+    bool isConnected() { return m_isConnected; }
 
     void setThreadHandler(std::function<void(void)> func) { m_threadHandler = new std::thread(func);}
 
