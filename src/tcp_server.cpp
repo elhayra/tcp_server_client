@@ -1,6 +1,3 @@
-//
-// Created by erauper on 4/7/19.
-//
 
 #include "../include/tcp_server.h"
 
