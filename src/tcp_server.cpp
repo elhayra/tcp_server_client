@@ -80,7 +80,7 @@ bool TcpServer::deleteClient(Client & client) {
  */
 void TcpServer::publishClientMsg(const Client & client, const char * msg, size_t msgSize) {
     for (uint i=0; i<m_subscibers.size(); i++) {
-        if (m_subscibers[i].wantedIp == client.getIp()) {
+        if (m_subscibers[i].wantedIp == client.getIp() || m_subscibers[i].wantedIp.empty()) {
             if (m_subscibers[i].incoming_packet_func != NULL) {
                 (*m_subscibers[i].incoming_packet_func)(client, msg, msgSize);
             }
@@ -151,7 +151,7 @@ pipe_ret_t TcpServer::start(int port) {
  * call this function in a loop to enable the acceptance of more than one.
  * If timeout argument equal 0, this function is executed in blocking mode.
  * If timeout argument is > 0 then this function is executed in non-blocking
- * mode and will quit after timeout seconds if no client tried to connect.
+ * mode (async) and will quit after timeout seconds if no client tried to connect.
  * Return accepted client
  */
 Client TcpServer::acceptClient(uint timeout) {
