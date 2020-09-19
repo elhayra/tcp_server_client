@@ -33,6 +33,7 @@ void TcpServer::receiveTask(/*TcpServer *context*/) {
 
     while(client->isConnected()) {
         char msg[MAX_PACKET_SIZE];
+        memset(msg, 0, sizeof msg);
         int numOfBytesReceived = recv(client->getFileDescriptor(), msg, MAX_PACKET_SIZE, 0);
         if(numOfBytesReceived < 1) {
             client->setDisconnected();
