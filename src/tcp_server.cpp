@@ -110,6 +110,18 @@ pipe_ret_t TcpServer::start(int port) {
     m_clients.reserve(10);
     m_subscibers.reserve(10);
     pipe_ret_t ret;
+#ifdef WIN32
+    WORD wVersionRequested;
+    WSADATA wsaData;
+    int err;
+    wVersionRequested = MAKEWORD(1, 1);
+    err = WSAStartup(wVersionRequested, &wsaData);
+    if (err != 0)
+    {
+        perror("WSAStartup error");
+    }
+#endif // WIN32
+
 
     m_sockfd = socket(AF_INET,SOCK_STREAM,0);
     if (m_sockfd == -1) { //socket failed
@@ -119,7 +131,13 @@ pipe_ret_t TcpServer::start(int port) {
     }
     // set socket for reuse (otherwise might have to wait 4 minutes every time socket is closed)
     int option = 1;
+#ifdef WIN32
+    setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&option, sizeof(option));
+#else
     setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+#endif // WIN32
+
+   
 
     memset(&m_serverAddress, 0, sizeof(m_serverAddress));
     m_serverAddress.sin_family = AF_INET;
@@ -152,7 +170,7 @@ pipe_ret_t TcpServer::start(int port) {
  * Return accepted client
  */
 Client TcpServer::acceptClient(uint timeout) {
-    socklen_t sosize  = sizeof(m_clientAddress);
+    int sosize  = sizeof(m_clientAddress);
     Client newClient;
 
     if (timeout > 0) {
