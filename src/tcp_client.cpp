@@ -118,9 +118,8 @@ void TcpClient::publishServerDisconnected(const pipe_ret_t & ret) {
  * Receive server packets, and notify user
  */
 void TcpClient::ReceiveTask() {
-
+    char msg[MAX_PACKET_SIZE];
     while(!stop) {
-        char msg[MAX_PACKET_SIZE];
         memset(msg, 0, sizeof msg);
         int numOfBytesReceived = recv(m_sockfd, msg, MAX_PACKET_SIZE, 0);
         if(numOfBytesReceived < 1) {
@@ -145,7 +144,11 @@ pipe_ret_t TcpClient::finish(){
     stop = true;
     terminateReceiveThread();
     pipe_ret_t ret;
+#ifdef WIN32
+    if (closesocket(m_sockfd) == -1) { // close failed
+#else
     if (close(m_sockfd) == -1) { // close failed
+#endif // WIN32
         ret.success = false;
         ret.msg = strerror(errno);
         return ret;

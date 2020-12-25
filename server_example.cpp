@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////
 /////////////////////SERVER EXAMPLE////////////////////////
 ///////////////////////////////////////////////////////////
-
+#define SERVER_EXAMPLE
 #ifdef SERVER_EXAMPLE
 
 #include <iostream>
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         } else {
             std::cout << "Accepting client failed: " << client.getInfoMessage() << std::endl;
         }
-        sleep(1);
+        Sleep(1);
     }
 
     return 0;

@@ -27,9 +27,8 @@ void TcpServer::printClients() {
 void TcpServer::receiveTask(/*TcpServer *context*/) {
 
     Client * client = &m_clients.back();
-
+    char msg[MAX_PACKET_SIZE];
     while(client->isConnected()) {
-        char msg[MAX_PACKET_SIZE];
         memset(msg, 0, sizeof msg);
         int numOfBytesReceived = recv(client->getFileDescriptor(), msg, MAX_PACKET_SIZE, 0);
         if(numOfBytesReceived < 1) {
@@ -40,7 +39,11 @@ void TcpServer::receiveTask(/*TcpServer *context*/) {
             } else {
                 client->setErrorMessage(strerror(errno));
             }
+#ifdef WIN32
+            closesocket(client->getFileDescriptor());
+#else
             close(client->getFileDescriptor());
+#endif // WIN32
             publishClientDisconnected(*client);
             deleteClient(*client);
             break;
@@ -255,13 +258,21 @@ pipe_ret_t TcpServer::finish() {
     pipe_ret_t ret;
     for (uint i=0; i<m_clients.size(); i++) {
         m_clients[i].setDisconnected();
+#ifdef WIN32
+        if (closesocket(m_clients[i].getFileDescriptor()) == -1) { // close failed
+#else
         if (close(m_clients[i].getFileDescriptor()) == -1) { // close failed
+#endif
             ret.success = false;
             ret.msg = strerror(errno);
             return ret;
         }
     }
+#ifdef WIN32
+    if (closesocket(m_sockfd) == -1) { // close failed
+#else
     if (close(m_sockfd) == -1) { // close failed
+#endif
         ret.success = false;
         ret.msg = strerror(errno);
         return ret;
