@@ -11,7 +11,7 @@ The server class supports multiple clients.
 
 ## Building both server and client
 
-This project is set to use CMake to build both client example and server example.
+This project is set to use CMake to build both the *client example* and the *server example*. In addition, CMake builds a static *library file* to hold the common code to both server and client.
 
 To build:
 
@@ -22,9 +22,9 @@ $ mkdir build
 $ cmake ..
 $ make
 ```
-The commands above generate two files: `tcp_client` and `tcp_server`.
+The commands above generate three files: `libtcp_client_server.a`, `tcp_client` and `tcp_server`.
 
-To run them, open a terminal, move to the `build` folder and execute:
+To run the last two, open a terminal, move to the `build` folder and execute:
 ```
 ./tcp_server
 ```
