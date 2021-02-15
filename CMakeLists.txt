@@ -6,6 +6,11 @@ find_package (Threads)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-std=c++11 -pthread")
 
+add_library(${PROJECT_NAME} 
+        src/tcp_client.cpp
+        src/tcp_server.cpp
+        src/client.cpp)
+
 option(SERVER_EXAMPLE "Build SERVER" ON)
 
 if(SERVER_EXAMPLE)
@@ -14,13 +19,9 @@ if(SERVER_EXAMPLE)
                 -DSERVER_EXAMPLE
         )
 
-        add_executable(tcp_server
-                server_example.cpp
-                src/tcp_client.cpp
-                src/tcp_server.cpp
-                src/client.cpp)
+        add_executable(tcp_server server_example.cpp)
 
-        target_link_libraries (tcp_server ${CMAKE_THREAD_LIBS_INIT})
+        target_link_libraries (tcp_server ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 endif()
 
@@ -32,12 +33,8 @@ if(CLIENT_EXAMPLE)
                 -DCLIENT_EXAMPLE
         )
 
-        add_executable(tcp_client
-        client_example.cpp
-        src/tcp_client.cpp
-        src/tcp_server.cpp
-        src/client.cpp)
+        add_executable(tcp_client client_example.cpp)
 
-        target_link_libraries (tcp_client ${CMAKE_THREAD_LIBS_INIT})
+        target_link_libraries (tcp_client ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 endif()

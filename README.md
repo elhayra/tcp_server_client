@@ -24,7 +24,7 @@ $ make
 ```
 The commands above generate two files: `tcp_client` and `tcp_server`.
 
-To run, open a terminal, move to the `build` folder and execute:
+To run them, open a terminal, move to the `build` folder and execute:
 ```
 ./tcp_server
 ```
