@@ -157,7 +157,7 @@ Client TcpServer::acceptClient(uint timeout) {
 
     if (timeout > 0) {
         struct timeval tv;
-        tv.tv_sec = 2;
+        tv.tv_sec = timeout;
         tv.tv_usec = 0;
         FD_ZERO(&m_fds);
         FD_SET(m_sockfd, &m_fds);
