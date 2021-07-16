@@ -1,41 +1,56 @@
 
 #include "../include/tcp_server.h"
+#include "../include/common.h"
 
+//todo: turn code into c++11 (use cpp 11 features)
+//todo: allow running server and client examples together such that it is interactive (maybe use docker-compose?)
+//todo: go over code, improve doc in code and in README
+
+//todo: pr: fix race - code now thread safe, refactored, running
+
+TcpServer::TcpServer() {
+    _subscibers.reserve(10);
+    _clients.reserve(10);
+}
 
 void TcpServer::subscribe(const server_observer_t & observer) {
-    m_subscibers.push_back(observer);
+    std::lock_guard<std::mutex> lock(_subscribersMtx);
+    _subscibers.push_back(observer);
 }
 
 void TcpServer::unsubscribeAll() {
-    m_subscibers.clear();
+    std::lock_guard<std::mutex> lock(_subscribersMtx);
+    _subscibers.clear();
 }
 
 void TcpServer::printClients() {
-    for (uint i=0; i<m_clients.size(); i++) {
-        std::string connected = m_clients[i].isConnected() ? "True" : "False";
+    std::lock_guard<std::mutex> lock(_clientsMtx);
+    for (const Client & client : _clients) {
+        const std::string connected = client.isConnected() ? "True" : "False";
         std::cout << "-----------------\n" <<
-                  "IP address: " << m_clients[i].getIp() << std::endl <<
+                  "IP address: " << client.getIp() << std::endl <<
                   "Connected?: " << connected << std::endl <<
-                  "Socket FD: " << m_clients[i].getFileDescriptor() << std::endl <<
-                  "Message: " << m_clients[i].getInfoMessage().c_str() << std::endl;
+                  "Socket FD: " << client.getFileDescriptor() << std::endl <<
+                  "Message: " << client.getInfoMessage().c_str() << std::endl;
     }
 }
 
 /*
  * Receive client packets, and notify user
  */
-void TcpServer::receiveTask(/*TcpServer *context*/) {
+void TcpServer::receiveTask() {
+    std::lock_guard<std::mutex> lock(_clientsMtx); // todo: this will cause deadlock
 
-    Client * client = &m_clients.back();
+    Client * client = &_clients.back();
 
     while(client->isConnected()) {
         char msg[MAX_PACKET_SIZE];
-        int numOfBytesReceived = recv(client->getFileDescriptor(), msg, MAX_PACKET_SIZE, 0);
+        const int numOfBytesReceived = recv(client->getFileDescriptor(), msg, MAX_PACKET_SIZE, 0);
         if(numOfBytesReceived < 1) {
             client->setDisconnected();
-            if (numOfBytesReceived == 0) { //client closed connection
+            const bool clientClosedConnection = (numOfBytesReceived == 0);
+            if (clientClosedConnection) {
                 client->setErrorMessage("Client closed connection");
-                //printf("client closed");
             } else {
                 client->setErrorMessage(strerror(errno));
             }
@@ -55,15 +70,17 @@ void TcpServer::receiveTask(/*TcpServer *context*/) {
  * true if it is.
  */
 bool TcpServer::deleteClient(Client & client) {
+    std::lock_guard<std::mutex> lock(_clientsMtx);
+
     int clientIndex = -1;
-    for (uint i=0; i<m_clients.size(); i++) {
-        if (m_clients[i] == client) {
+    for (uint i=0; i < _clients.size(); i++) {
+        if (_clients[i] == client) {
             clientIndex = i;
             break;
         }
     }
     if (clientIndex > -1) {
-        m_clients.erase(m_clients.begin() + clientIndex);
+        _clients.erase(_clients.begin() + clientIndex);
         return true;
     }
     return false;
@@ -76,10 +93,12 @@ bool TcpServer::deleteClient(Client & client) {
  * the specific observer requested IP
  */
 void TcpServer::publishClientMsg(const Client & client, const char * msg, size_t msgSize) {
-    for (uint i=0; i<m_subscibers.size(); i++) {
-        if (m_subscibers[i].wantedIp == client.getIp() || m_subscibers[i].wantedIp.empty()) {
-            if (m_subscibers[i].incoming_packet_func != NULL) {
-                (*m_subscibers[i].incoming_packet_func)(client, msg, msgSize);
+    std::lock_guard<std::mutex> lock(_subscribersMtx);
+
+    for (uint i=0; i < _subscibers.size(); i++) {
+        if (_subscibers[i].wantedIp == client.getIp() || _subscibers[i].wantedIp.empty()) {
+            if (_subscibers[i].incoming_packet_func != NULL) {
+                (*_subscibers[i].incoming_packet_func)(client, msg, msgSize);
             }
         }
     }
@@ -92,10 +111,12 @@ void TcpServer::publishClientMsg(const Client & client, const char * msg, size_t
  * observer requested IP
  */
 void TcpServer::publishClientDisconnected(const Client & client) {
-    for (uint i=0; i<m_subscibers.size(); i++) {
-        if (m_subscibers[i].wantedIp == client.getIp()) {
-            if (m_subscibers[i].disconnected_func != NULL) {
-                (*m_subscibers[i].disconnected_func)(client);
+    std::lock_guard<std::mutex> lock(_subscribersMtx);
+
+    for (uint i=0; i < _subscibers.size(); i++) {
+        if (_subscibers[i].wantedIp == client.getIp()) {
+            if (_subscibers[i].disconnected_func != NULL) {
+                (*_subscibers[i].disconnected_func)(client);
             }
         }
     }
@@ -105,42 +126,49 @@ void TcpServer::publishClientDisconnected(const Client & client) {
  * Bind port and start listening
  * Return tcp_ret_t
  */
-pipe_ret_t TcpServer::start(int port) {
-    m_sockfd = 0;
-    m_clients.reserve(10);
-    m_subscibers.reserve(10);
-    pipe_ret_t ret;
-
-    m_sockfd = socket(AF_INET,SOCK_STREAM,0);
-    if (m_sockfd == -1) { //socket failed
-        ret.success = false;
-        ret.msg = strerror(errno);
-        return ret;
+pipe_ret_t TcpServer::start(int port, int maxNumOfClients) {
+    try {
+        initializeSocket();
+        bindAddress(port);
+        listenToClients(maxNumOfClients);
+    } catch (const std::runtime_error &error) {
+        return pipe_ret_t::failure(error.what());
     }
+    return pipe_ret_t::success();
+}
+
+void TcpServer::initializeSocket() {
+    _sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    const bool socketFailed = (_sockfd == -1);
+    if (socketFailed) {
+        throw new std::runtime_error(strerror(errno));
+    }
+
     // set socket for reuse (otherwise might have to wait 4 minutes every time socket is closed)
-    int option = 1;
-    setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    const int option = 1;
+    setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+}
 
-    memset(&m_serverAddress, 0, sizeof(m_serverAddress));
-    m_serverAddress.sin_family = AF_INET;
-    m_serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    m_serverAddress.sin_port = htons(port);
+void TcpServer::bindAddress(int port) {
+    memset(&_serverAddress, 0, sizeof(_serverAddress));
+    _serverAddress.sin_family = AF_INET;
+    _serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+    _serverAddress.sin_port = htons(port);
 
-    int bindSuccess = bind(m_sockfd, (struct sockaddr *)&m_serverAddress, sizeof(m_serverAddress));
-    if (bindSuccess == -1) { // bind failed
-        ret.success = false;
-        ret.msg = strerror(errno);
-        return ret;
+    const int bindResult = bind(_sockfd, (struct sockaddr *)&_serverAddress, sizeof(_serverAddress));
+    const bool bindFailed = (bindResult == -1);
+    if (bindFailed) {
+        throw new std::runtime_error(strerror(errno));
     }
-    const int clientsQueueSize = 5;
-    int listenSuccess = listen(m_sockfd, clientsQueueSize);
-    if (listenSuccess == -1) { // listen failed
-        ret.success = false;
-        ret.msg = strerror(errno);
-        return ret;
+}
+
+void TcpServer::listenToClients(int maxNumOfClients) {
+    const int clientsQueueSize = maxNumOfClients;
+    int listenResult = listen(_sockfd, clientsQueueSize);
+    const bool listenFailed = (listenResult == -1);
+    if (listenFailed) {
+        throw new std::runtime_error(strerror(errno));
     }
-    ret.success = true;
-    return ret;
 }
 
 /*
@@ -152,39 +180,48 @@ pipe_ret_t TcpServer::start(int port) {
  * Return accepted client
  */
 Client TcpServer::acceptClient(uint timeout) {
-    socklen_t sosize  = sizeof(m_clientAddress);
+    socklen_t sosize  = sizeof(_clientAddress);
     Client newClient;
 
     if (timeout > 0) {
         struct timeval tv;
         tv.tv_sec = timeout;
         tv.tv_usec = 0;
-        FD_ZERO(&m_fds);
-        FD_SET(m_sockfd, &m_fds);
-        int selectRet = select(m_sockfd + 1, &m_fds, NULL, NULL, &tv);
-        if (selectRet == -1) { // select failed
+        FD_ZERO(&_fds);
+        FD_SET(_sockfd, &_fds);
+        int selectRet = select(_sockfd + 1, &_fds, NULL, NULL, &tv);
+
+        const int SELECT_FAILED = -1;
+        const int SELECT_TIMEOUT = 0;
+        const bool noIncomingNewClient = (!FD_ISSET(_sockfd, &_fds));
+
+        if (selectRet == SELECT_FAILED) {
             newClient.setErrorMessage(strerror(errno));
             return newClient;
-        } else if (selectRet == 0) { // timeout
+        } else if (selectRet == SELECT_TIMEOUT) {
             newClient.setErrorMessage("Timeout waiting for client");
             return newClient;
-        } else if (!FD_ISSET(m_sockfd, &m_fds)) { // no new client
+        } else if (noIncomingNewClient) {
             newClient.setErrorMessage("File descriptor is not set");
             return newClient;
         }
     }
 
-    int file_descriptor = accept(m_sockfd, (struct sockaddr*)&m_clientAddress, &sosize);
-    if (file_descriptor == -1) { // accept failed
+    const int fileDescriptor = accept(_sockfd, (struct sockaddr*)&_clientAddress, &sosize);
+    const bool acceptFailed = (fileDescriptor == -1);
+    if (acceptFailed) {
         newClient.setErrorMessage(strerror(errno));
         return newClient;
     }
 
-    newClient.setFileDescriptor(file_descriptor);
+    newClient.setFileDescriptor(fileDescriptor);
     newClient.setConnected();
-    newClient.setIp(inet_ntoa(m_clientAddress.sin_addr));
-    m_clients.push_back(newClient);
-    m_clients.back().setThreadHandler(std::bind(&TcpServer::receiveTask, this));
+    newClient.setIp(inet_ntoa(_clientAddress.sin_addr));
+    {
+        std::lock_guard<std::mutex> lock(_clientsMtx);
+        _clients.push_back(newClient);
+        _clients.back().setThreadHandler(std::bind(&TcpServer::receiveTask, this));
+    }
 
     return newClient;
 }
@@ -194,15 +231,15 @@ Client TcpServer::acceptClient(uint timeout) {
  * Return true if message was sent successfully to all clients
  */
 pipe_ret_t TcpServer::sendToAllClients(const char * msg, size_t size) {
-    pipe_ret_t ret;
-    for (uint i=0; i<m_clients.size(); i++) {
-        ret = sendToClient(m_clients[i], msg, size);
-        if (!ret.success) {
+    std::lock_guard<std::mutex> lock(_clientsMtx);
+
+    for (uint i=0; i < _clients.size(); i++) {
+        pipe_ret_t ret = sendToClient(_clients[i], msg, size);
+        if (!ret.successFlag) {
             return ret;
         }
     }
-    ret.success = true;
-    return ret;
+    return pipe_ret_t::success();
 }
 
 /*
@@ -210,44 +247,43 @@ pipe_ret_t TcpServer::sendToAllClients(const char * msg, size_t size) {
  * Return true if message was sent successfully
  */
 pipe_ret_t TcpServer::sendToClient(const Client & client, const char * msg, size_t size){
-    pipe_ret_t ret;
-    int numBytesSent = send(client.getFileDescriptor(), (char *)msg, size, 0);
-    if (numBytesSent < 0) { // send failed
-        ret.success = false;
-        ret.msg = strerror(errno);
-        return ret;
+    const int numBytesSent = send(client.getFileDescriptor(), (char *)msg, size, 0);
+    const bool sendFailed = (numBytesSent < 0);
+    if (sendFailed) {
+        pipe_ret_t::failure(strerror(errno));
     }
-    if ((uint)numBytesSent < size) { // not all bytes were sent
-        ret.success = false;
-        char msg[100];
-        sprintf(msg, "Only %d bytes out of %lu was sent to client", numBytesSent, size);
-        ret.msg = msg;
-        return ret;
+
+    const bool notAllBytesWereSent = ((uint)numBytesSent < size);
+    if (notAllBytesWereSent) {
+        char errorMsg[100];
+        sprintf(errorMsg, "Only %d bytes out of %lu was sent to client", numBytesSent, size);
+        return pipe_ret_t::failure(errorMsg);
     }
-    ret.success = true;
-    return ret;
+
+    return pipe_ret_t::success();
 }
 
 /*
  * Close server and clients resources.
- * Return true is success, false otherwise
+ * Return true is successFlag, false otherwise
  */
 pipe_ret_t TcpServer::finish() {
-    pipe_ret_t ret;
-    for (uint i=0; i<m_clients.size(); i++) {
-        m_clients[i].setDisconnected();
-        if (close(m_clients[i].getFileDescriptor()) == -1) { // close failed
-            ret.success = false;
-            ret.msg = strerror(errno);
-            return ret;
+    std::lock_guard<std::mutex> lock(_clientsMtx);
+
+    for (uint i=0; i < _clients.size(); i++) {
+        _clients[i].setDisconnected();
+        const int closeClientResult = close(_clients[i].getFileDescriptor());
+        const bool closeClientFailed = (closeClientResult == -1);
+        if (closeClientFailed) {
+            return pipe_ret_t::failure(strerror(errno));
         }
     }
-    if (close(m_sockfd) == -1) { // close failed
-        ret.success = false;
-        ret.msg = strerror(errno);
-        return ret;
+
+    const int closeServerResult = close(_sockfd);
+    const bool closeServerFailed = (closeServerResult == -1);
+    if (closeServerFailed) {
+        return pipe_ret_t::failure(strerror(errno));
     }
-    m_clients.clear();
-    ret.success = true;
-    return ret;
+    _clients.clear();
+    return pipe_ret_t::success();
 }

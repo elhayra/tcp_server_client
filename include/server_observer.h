@@ -1,7 +1,4 @@
-
-
-#ifndef INTERCOM_SERVER_OBSERVER_H
-#define INTERCOM_SERVER_OBSERVER_H
+#pragma once
 
 #include <string>
 #include "client.h"
@@ -13,7 +10,6 @@ typedef void (disconnected_func)(const Client & client);
 typedef disconnected_func* disconnected_func_t;
 
 struct server_observer_t {
-
 	std::string wantedIp;
 	incoming_packet_func_t incoming_packet_func;
 	disconnected_func_t disconnected_func;
@@ -25,4 +21,3 @@ struct server_observer_t {
 	}
 };
 
-#endif //INTERCOM_SERVER_OBSERVER_H

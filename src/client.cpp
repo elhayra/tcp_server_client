@@ -4,16 +4,16 @@
 
 
 Client::~Client() {
-    if (m_threadHandler != nullptr) {
-        m_threadHandler->detach();
-        delete m_threadHandler;
-        m_threadHandler = nullptr;
+    if (_threadHandler != nullptr) {
+        _threadHandler->detach();
+        delete _threadHandler;
+        _threadHandler = nullptr;
     }
 }
 
 bool Client::operator ==(const Client & other) {
-    if ( (this->m_sockfd == other.m_sockfd) &&
-         (this->m_ip == other.m_ip) ) {
+    if ((this->_sockfd == other._sockfd) &&
+        (this->_ip == other._ip) ) {
         return true;
     }
     return false;

@@ -28,7 +28,7 @@ void onIncomingMsg1(const Client & client, const char * msg, size_t size) {
     if (msgStr.find("quit") != std::string::npos) {
         std::cout << "Closing server..." << std::endl;
         pipe_ret_t finishRet = server.finish();
-        if (finishRet.success) {
+        if (finishRet.successFlag) {
             std::cout << "Server closed." << std::endl;
         } else {
             std::cout << "Failed closing server: " << finishRet.msg << std::endl;
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 {
     // start server on port 65123
     pipe_ret_t startRet = server.start(65123);
-    if (startRet.success) {
+    if (startRet.successFlag) {
         std::cout << "Server setup succeeded" << std::endl;
     } else {
         std::cout << "Server setup failed: " << startRet.msg << std::endl;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 
     // configure and register observer2
     observer2.incoming_packet_func = onIncomingMsg2;
-    observer1.disconnected_func = nullptr; //don't care about disconnection
+    observer1.disconnected_func = nullptr; // nullptr means we don't care about disconnection
     observer2.wantedIp = "10.88.0.11"; // use empty string instead to receive messages from any IP address
     server.subscribe(observer2);
 

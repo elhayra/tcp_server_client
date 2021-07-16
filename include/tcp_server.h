@@ -1,9 +1,4 @@
-
-
-#ifndef INTERCOM_TCP_SERVER_H
-#define INTERCOM_TCP_SERVER_H
-
-
+#pragma once
 
 #include <vector>
 #include <stdio.h>
@@ -18,33 +13,35 @@
 #include <cstring>
 #include <errno.h>
 #include <iostream>
+#include <mutex>
 #include "client.h"
 #include "server_observer.h"
 #include "pipe_ret_t.h"
-
-
-#define MAX_PACKET_SIZE 4096
 
 class TcpServer
 {
 private:
 
-    int m_sockfd;
-    struct sockaddr_in m_serverAddress;
-    struct sockaddr_in m_clientAddress;
-    fd_set m_fds;
-    std::vector<Client> m_clients;
-    std::vector<server_observer_t> m_subscibers;
-    std::thread * threadHandle;
+    int _sockfd;
+    struct sockaddr_in _serverAddress;
+    struct sockaddr_in _clientAddress;
+    fd_set _fds;
+    std::vector<Client> _clients;
+    std::vector<server_observer_t> _subscibers;
+
+    std::mutex _subscribersMtx;
+    std::mutex _clientsMtx;
 
     void publishClientMsg(const Client & client, const char * msg, size_t msgSize);
     void publishClientDisconnected(const Client & client);
-    void receiveTask(/*void * context*/);
-
+    void receiveTask();
 
 public:
-
-    pipe_ret_t start(int port);
+    TcpServer();
+    pipe_ret_t start(int port, int maxNumOfClients = 5);
+    void initializeSocket();
+    void bindAddress(int port);
+    void listenToClients(int maxNumOfClients);
     Client acceptClient(uint timeout);
     bool deleteClient(Client & client);
     void subscribe(const server_observer_t & observer);
@@ -55,6 +52,3 @@ public:
     void printClients();
 };
 
-
-
-#endif //INTERCOM_TCP_SERVER_H
