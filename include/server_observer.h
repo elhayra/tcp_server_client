@@ -1,23 +1,12 @@
 #pragma once
 
 #include <string>
+#include <functional>
 #include "client.h"
 
-typedef void (incoming_packet_func)(const Client & client, const char * msg, size_t size);
-typedef incoming_packet_func* incoming_packet_func_t;
-
-typedef void (disconnected_func)(const Client & client);
-typedef disconnected_func* disconnected_func_t;
-
 struct server_observer_t {
-	std::string wantedIp;
-	incoming_packet_func_t incoming_packet_func;
-	disconnected_func_t disconnected_func;
-
-	server_observer_t() {
-		wantedIp = "";
-		incoming_packet_func = NULL;
-		disconnected_func = NULL;
-	}
+	std::string wantedIP = "";
+	std::function<void(const Client & client, const char * msg, size_t size)> incomingPacketHandler;
+	std::function<void(const std::string &ip, const std::string &msg)> disconnectionHandler;
 };
 

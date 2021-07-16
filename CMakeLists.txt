@@ -20,6 +20,6 @@ add_executable(tcp_client_server
         server_example.cpp
         src/tcp_client.cpp
         src/tcp_server.cpp
-        src/client.cpp include/common.h src/common.cpp src/pipe_ret_t.h.cpp)
+        src/client.cpp include/common.h src/common.cpp src/pipe_ret_t.h.cpp include/client_event.h)
 
 target_link_libraries (tcp_client_server ${CMAKE_THREAD_LIBS_INIT})

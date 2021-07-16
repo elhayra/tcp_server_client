@@ -18,8 +18,8 @@
 #include "server_observer.h"
 #include "pipe_ret_t.h"
 
-class TcpServer
-{
+class TcpServer {
+
 private:
 
     int _sockfd;
@@ -27,14 +27,16 @@ private:
     struct sockaddr_in _clientAddress;
     fd_set _fds;
     std::vector<Client> _clients;
-    std::vector<server_observer_t> _subscibers;
+    std::vector<server_observer_t> _subscribers;
 
     std::mutex _subscribersMtx;
     std::mutex _clientsMtx;
+    std::mutex _sockfdMtx;
 
     void publishClientMsg(const Client & client, const char * msg, size_t msgSize);
-    void publishClientDisconnected(const Client & client);
-    void receiveTask();
+    void publishClientDisconnected(const std::string&, const std::string&);
+    pipe_ret_t waitForClient(uint timeout);
+    void clientEventHandler(const Client&, ClientEvent, const std::string &msg);
 
 public:
     TcpServer();
@@ -48,7 +50,9 @@ public:
     void unsubscribeAll();
     pipe_ret_t sendToAllClients(const char * msg, size_t size);
     pipe_ret_t sendToClient(const Client & client, const char * msg, size_t size);
-    pipe_ret_t finish();
+    pipe_ret_t close();
     void printClients();
+    //todo: enable user to get client by id
+
 };
 

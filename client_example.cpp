@@ -47,9 +47,9 @@ int main() {
 
     // configure and register observer
     client_observer_t observer;
-	observer.wantedIp = "127.0.0.1";
-	observer.incoming_packet_func = onIncomingMsg;
-	observer.disconnected_func = onDisconnection;
+	observer.wantedIP = "127.0.0.1";
+	observer.incomingPacketHandler = onIncomingMsg;
+	observer.disconnectedHandler = onDisconnection;
 	client.subscribe(observer);
 
 	// connect client to an open server

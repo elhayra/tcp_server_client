@@ -27,11 +27,11 @@ void onIncomingMsg1(const Client & client, const char * msg, size_t size) {
     // else just print the client message
     if (msgStr.find("quit") != std::string::npos) {
         std::cout << "Closing server..." << std::endl;
-        pipe_ret_t finishRet = server.finish();
-        if (finishRet.successFlag) {
+        pipe_ret_t finishRet = server.close();
+        if (finishRet.isSuccessful()) {
             std::cout << "Server closed." << std::endl;
         } else {
-            std::cout << "Failed closing server: " << finishRet.msg << std::endl;
+            std::cout << "Failed closing server: " << finishRet.message() << std::endl;
         }
     } else if (msgStr.find("print") != std::string::npos){
         server.printClients();
@@ -54,46 +54,45 @@ void onIncomingMsg2(const Client & client, const char * msg, size_t size) {
 }
 
 // observer callback. will be called when client disconnects
-void onClientDisconnected(const Client & client) {
-    std::cout << "Client: " << client.getIp() << " disconnected: " << client.getInfoMessage() << std::endl;
+void onClientDisconnected(const std::string &ip, const std::string &msg) {
+    std::cout << "Client: " << ip << " disconnected. Reason: " << msg << std::endl;
 }
 
 int main(int argc, char *argv[])
 {
     // start server on port 65123
     pipe_ret_t startRet = server.start(65123);
-    if (startRet.successFlag) {
+    if (startRet.isSuccessful()) {
         std::cout << "Server setup succeeded" << std::endl;
     } else {
-        std::cout << "Server setup failed: " << startRet.msg << std::endl;
+        std::cout << "Server setup failed: " << startRet.message() << std::endl;
         return EXIT_FAILURE;
     }
 
     // configure and register observer1
-    observer1.incoming_packet_func = onIncomingMsg1;
-    observer1.disconnected_func = onClientDisconnected;
-    observer1.wantedIp = "127.0.0.1";
+    observer1.incomingPacketHandler = onIncomingMsg1;
+    observer1.disconnectionHandler = onClientDisconnected;
+    observer1.wantedIP = "127.0.0.1";
     server.subscribe(observer1);
 
     // configure and register observer2
-    observer2.incoming_packet_func = onIncomingMsg2;
-    observer1.disconnected_func = nullptr; // nullptr means we don't care about disconnection
-    observer2.wantedIp = "10.88.0.11"; // use empty string instead to receive messages from any IP address
+    observer2.incomingPacketHandler = onIncomingMsg2;
+    observer2.disconnectionHandler = nullptr; // nullptr means we don't care about disconnection
+    observer2.wantedIP = "10.88.0.11"; // use empty string instead to receive messages from any IP address
     server.subscribe(observer2);
 
     // receive clients
     while(1) {
-        Client client = server.acceptClient(0);
-        if (client.isConnected()) {
+        try {
+            Client client = server.acceptClient(0);
             std::cout << "Got client with IP: " << client.getIp() << std::endl;
             server.printClients();
-        } else {
-            std::cout << "Accepting client failed: " << client.getInfoMessage() << std::endl;
+        } catch (const std::runtime_error &error) {
+            std::cout << "Accepting client failed: " << error.what() << std::endl;
         }
+
         sleep(1);
     }
-
-    return 0;
 }
 
 #endif
