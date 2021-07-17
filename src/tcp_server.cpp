@@ -15,6 +15,10 @@ TcpServer::TcpServer() {
     _clients.reserve(10);
 }
 
+TcpServer::~TcpServer() {
+    close();
+}
+
 void TcpServer::subscribe(const server_observer_t & observer) {
     std::lock_guard<std::mutex> lock(_subscribersMtx);
     _subscribers.push_back(observer);
@@ -32,21 +36,27 @@ void TcpServer::printClients() {
     }
 }
 
+int TcpServer::findClientIndexByIP(const std::string &ip) {
+    int clientIndex = -1;
+    for (uint i=0; i < _clients.size(); i++) {
+        if (_clients[i]->getIp() == ip) {
+            clientIndex = i;
+            break;
+        }
+    }
+    return clientIndex;
+}
+
 /*
  * Erase client from clients vector.
  * If client isn't in the vector, return false. Return
  * true if it is.
  */
-bool TcpServer::deleteClient(Client & client) {
+bool TcpServer::deleteClient(const std::string &clientIP) {
     std::lock_guard<std::mutex> lock(_clientsMtx);
 
-    int clientIndex = -1;
-    for (uint i=0; i < _clients.size(); i++) {
-        if (*_clients[i] == client) {
-            clientIndex = i;
-            break;
-        }
-    }
+    const int clientIndex = findClientIndexByIP(clientIP);
+
     if (clientIndex > -1) {
         delete _clients[clientIndex];
         _clients.erase(_clients.begin() + clientIndex);
@@ -117,6 +127,7 @@ pipe_ret_t TcpServer::start(int port, int maxNumOfClients) {
     } catch (const std::runtime_error &error) {
         return pipe_ret_t::failure(error.what());
     }
+    _isClosed = false;
     return pipe_ret_t::success();
 }
 
@@ -254,11 +265,28 @@ pipe_ret_t TcpServer::sendToClient(const Client & client, const char * msg, size
     return pipe_ret_t::success();
 }
 
+pipe_ret_t TcpServer::sendToClient(const std::string & clientIP, const char * msg, size_t size) {
+    const int clientIndex = findClientIndexByIP(clientIP);
+    if (clientIndex < 0) {
+        return pipe_ret_t::failure("client not found");
+    }
+
+    std::lock_guard<std::mutex> lock(_clientsMtx);
+    const Client & client = *_clients[clientIndex];
+    return sendToClient(client, msg, size);
+}
+
 /*
  * Close server and clients resources.
  * Return true is successFlag, false otherwise
  */
 pipe_ret_t TcpServer::close() {
+    if (_isClosed) {
+       return pipe_ret_t::failure("server is already closed");
+    }
+
+    std::lock_guard<std::mutex> closingLock(_closingMtx);
+
     { // close clients
         std::lock_guard<std::mutex> lock(_clientsMtx);
 
@@ -273,6 +301,7 @@ pipe_ret_t TcpServer::close() {
     }
 
     { // close server
+        _isClosed = true;
         const int closeServerResult = ::close(_sockfd.get());
         const bool closeServerFailed = (closeServerResult == -1);
         if (closeServerFailed) {

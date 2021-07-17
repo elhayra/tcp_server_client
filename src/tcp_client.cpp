@@ -6,6 +6,10 @@ TcpClient::TcpClient() {
     _stop = false;
 }
 
+TcpClient::~TcpClient() {
+    terminateReceiveThread();
+}
+
 pipe_ret_t TcpClient::connectTo(const std::string & address, int port) {
     try {
         initializeSocket();
@@ -164,6 +168,3 @@ void TcpClient::terminateReceiveThread() {
     }
 }
 
-TcpClient::~TcpClient() {
-    terminateReceiveThread();
-}

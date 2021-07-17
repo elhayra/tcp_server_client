@@ -58,6 +58,66 @@ void onClientDisconnected(const std::string &ip, const std::string &msg) {
     std::cout << "Client: " << ip << " disconnected. Reason: " << msg << std::endl;
 }
 
+
+void printMenu() {
+    std::cout << "\n\nselect one of the following options: \n" <<
+              "1. accept client\n" <<
+              "2. send all clients a message ('hello clients')\n" <<
+              "3. print list of accepted clients\n" <<
+              "4. close server\n";
+}
+
+int getMenuSelection() {
+    int selection = 0;
+    std::cin >> selection;
+    return selection;
+}
+
+void handleMenuSelection(int selection) {
+    static const int minSelection = 1;
+    static const int maxSelection = 4;
+    if (selection < minSelection || selection > maxSelection) {
+        std::cout << "invalid selection: " << selection <<
+                  ". selection must be b/w " << minSelection << " and " << maxSelection << "\n";
+    }
+    switch (selection) {
+        case 1: { // accept client
+            try {
+                std::string clientIP = server.acceptClient(0);
+                std::cout << "\naccepted new client with IP: " << clientIP << "\n" <<
+                          "== updated list of accepted clients ==" << "\n";
+                server.printClients();
+            } catch (const std::runtime_error &error) {
+                std::cout << "Accepting client failed: " << error.what() << std::endl;
+            }
+            break;
+        }
+        case 2: { // send all clients a message
+            const std::string msg = "hello clients";
+            pipe_ret_t sendingResult = server.sendToAllClients(msg.c_str(), msg.size());
+            if (sendingResult.isSuccessful()) {
+                std::cout << "sent message to all clients successfully\n";
+            } else {
+                std::cout << "failed to sent message: " << sendingResult.message() << "\n";
+            }
+            break;
+        }
+        case 3: { // print list of accepted clients
+            server.printClients();
+            break;
+        }
+        case 4: { // close server
+            pipe_ret_t sendingResult = server.close();
+            if (sendingResult.isSuccessful()) {
+                std::cout << "closed server successfully\n";
+            } else {
+                std::cout << "failed to close server: " << sendingResult.message() << "\n";
+            }
+            break;
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     // start server on port 65123
@@ -83,16 +143,9 @@ int main(int argc, char *argv[])
 
     // receive clients
     while(1) {
-        try {
-            std::string clientIP = server.acceptClient(0);
-            std::cout << "\naccepted new client with IP: " << clientIP << "\n" <<
-                         "== updated list of accepted clients ==" << "\n";
-            server.printClients();
-        } catch (const std::runtime_error &error) {
-            std::cout << "Accepting client failed: " << error.what() << std::endl;
-        }
-
-        sleep(1);
+        printMenu();
+        int selection = getMenuSelection();
+        handleMenuSelection(selection);
     }
 }
 

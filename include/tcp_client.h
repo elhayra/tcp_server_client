@@ -20,9 +20,15 @@
 #include "pipe_ret_t.h"
 #include "file_descriptor.h"
 
+//todo: fix closing server (and also check closing client) - there is a deadlock when running the example
 //todo: document: 'connection refused' - make sure server is running
 //todo: document: play with code - close server while clients are alive, and watch how they receive notification about the server closing
 //todo: document: how to play with the examples
+//todo: document: how to compile the code, how to run multiple clients
+//todo: document: thread safety
+//todo: document: how you can customise this for your needs
+//todo: add compilation bash script
+//todo: for each function, go over it and check what if it is called from more than one thread at the same time?
 
 class TcpClient
 {

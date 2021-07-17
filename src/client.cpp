@@ -97,7 +97,7 @@ void Client::close() {
 
     setConnected(false);
 
-    if (_threadHandler != nullptr) {
+    if (_threadHandler) {
         _threadHandler->join();
         _threadHandler->detach();
         delete _threadHandler;
