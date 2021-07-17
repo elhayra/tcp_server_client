@@ -3,13 +3,11 @@
 #include <string>
 #include <thread>
 #include <functional>
+#include <mutex>
+#include <atomic>
+
 #include "pipe_ret_t.h"
 #include "client_event.h"
-//todo: the client need to get from the server all the info it needs to handle
-//todo: incoming and outgoing data. the function receive task should be part
-// todo: of this class.
-//todo: also, it should get a list of it subs, and notify server when
-//todo: it disconnects, or other events
 
 
 class Client {
@@ -19,16 +17,20 @@ class Client {
 private:
     int _sockfd = 0;
     std::string _ip = "";
-    bool _isConnected;
+    std::atomic<bool> _isConnected;
     std::thread * _threadHandler = nullptr;
     client_event_handler_t _eventHandlerCallback;
 
+    mutable std::mutex _sockfdMtx;
 
-    void setDisconnected() { _isConnected = false; }
+    void setConnected(bool flag) { _isConnected = flag; }
+
     void receiveTask();
 
 public:
+    Client();
     ~Client();
+
     bool operator ==(const Client & other) const ;
 
     void setFileDescriptor(int sockfd) { _sockfd = sockfd; }
@@ -39,7 +41,6 @@ public:
     void setEventsHandler(const client_event_handler_t & eventHandler) { _eventHandlerCallback = eventHandler; }
     void publishEvent(ClientEvent clientEvent, const std::string &msg = "");
 
-    void setConnected() { _isConnected = true; }
 
     bool isConnected() const { return _isConnected; }
 

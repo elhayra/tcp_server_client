@@ -10,17 +10,16 @@
 #include "../include/client.h"
 #include "../include/common.h"
 
-//todo: use mutexes
-
-Client::~Client() {
-    if (_threadHandler != nullptr) {
-        _threadHandler->detach();
-        delete _threadHandler;
-        _threadHandler = nullptr;
-    }
+Client::Client() {
+    setConnected(false);
 }
 
-bool Client::operator ==(const Client & other) const {
+Client::~Client() {
+    close();
+}
+
+bool Client::operator==(const Client & other) const {
+    std::lock_guard<std::mutex> lock(_sockfdMtx);
     if ((this->_sockfd == other._sockfd) &&
         (this->_ip == other._ip) ) {
         return true;
@@ -29,11 +28,17 @@ bool Client::operator ==(const Client & other) const {
 }
 
 void Client::startListen() {
+    setConnected(true);
     _threadHandler = new std::thread(&Client::receiveTask, this);
 }
 
 void Client::send(const char *msg, size_t size) const {
-    const size_t numBytesSent = ::send(_sockfd, (char *)msg, size, 0);
+    size_t numBytesSent;
+    {
+        std::lock_guard<std::mutex> lock(_sockfdMtx);
+        numBytesSent = ::send(_sockfd, (char *)msg, size, 0);
+    }
+
     const bool sendFailed = (numBytesSent < 0);
     if (sendFailed) {
         throw std::runtime_error(strerror(errno));
@@ -53,7 +58,11 @@ void Client::send(const char *msg, size_t size) const {
 void Client::receiveTask() {
     while(isConnected()) {
         char receivedMessage[MAX_PACKET_SIZE];
-        const int numOfBytesReceived = recv(_sockfd, receivedMessage, MAX_PACKET_SIZE, 0);
+        int numOfBytesReceived;
+        {
+            std::lock_guard<std::mutex> lock(_sockfdMtx);
+            numOfBytesReceived = recv(_sockfd, receivedMessage, MAX_PACKET_SIZE, 0);
+        }
         if(numOfBytesReceived < 1) {
             const bool clientClosedConnection = (numOfBytesReceived == 0);
             std::string disconnectionMessage;
@@ -63,7 +72,6 @@ void Client::receiveTask() {
                 disconnectionMessage = strerror(errno);
             }
             close();
-            setDisconnected();
             publishEvent(ClientEvent::DISCONNECTED, disconnectionMessage);
             break;
         } else {
@@ -81,14 +89,28 @@ void Client::print() const {
     std::cout << "-----------------\n" <<
               "IP address: " << getIp() << std::endl <<
               "Connected?: " << connected << std::endl <<
-              "Socket FD: " << _sockfd << std::endl <<
-              "Message: " << getInfoMessage().c_str() << std::endl;
+              "Socket FD: " << _sockfd << std::endl;
 }
 
 void Client::close() {
-   //todo: close thread and delete it. use mutex over connected flag
+    if (!isConnected()) { // already closed
+        return;
+    }
 
-    const int closeClientResult = ::close(_sockfd);
+    setConnected(false);
+
+    if (_threadHandler != nullptr) {
+        _threadHandler->join();
+        _threadHandler->detach();
+        delete _threadHandler;
+        _threadHandler = nullptr;
+    }
+
+    int closeClientResult;
+    {
+        std::lock_guard<std::mutex> lock(_sockfdMtx);
+        closeClientResult = ::close(_sockfd);
+    }
     const bool closeClientFailed = (closeClientResult == -1);
     if (closeClientFailed) {
         throw new std::runtime_error(strerror(errno));

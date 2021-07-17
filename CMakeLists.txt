@@ -11,8 +11,8 @@ set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-std=c++11 -pthread")
 # Each example contains a main() function, so
 # enable only one example, to avoid main() collision
 add_definitions(
-        -DSERVER_EXAMPLE
-#        -DCLIENT_EXAMPLE
+#        -DSERVER_EXAMPLE
+        -DCLIENT_EXAMPLE
 )
 
 add_executable(tcp_client_server

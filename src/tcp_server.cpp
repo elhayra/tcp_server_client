@@ -2,11 +2,8 @@
 #include <functional>
 #include "../include/tcp_server.h"
 
-//todo: turn code into c++11 (use cpp 11 features)
 //todo: allow running server and client examples together such that it is interactive (maybe use docker-compose?)
 //todo: go over code, improve doc in code and in README
-
-//todo: pr: fix race - code now thread safe, refactored, running
 
 #define SELECT_FAILED -1
 #define SELECT_TIMEOUT 0
@@ -29,8 +26,8 @@ void TcpServer::unsubscribeAll() {
 
 void TcpServer::printClients() {
     std::lock_guard<std::mutex> lock(_clientsMtx);
-    for (const Client & client : _clients) {
-        client.print();
+    for (const Client *client : _clients) {
+        client->print();
     }
 }
 
@@ -44,12 +41,13 @@ bool TcpServer::deleteClient(Client & client) {
 
     int clientIndex = -1;
     for (uint i=0; i < _clients.size(); i++) {
-        if (_clients[i] == client) {
+        if (*_clients[i] == client) {
             clientIndex = i;
             break;
         }
     }
     if (clientIndex > -1) {
+        delete _clients[clientIndex];
         _clients.erase(_clients.begin() + clientIndex);
         return true;
     }
@@ -60,7 +58,6 @@ void TcpServer::clientEventHandler(const Client &client, ClientEvent event, cons
     switch (event) {
         case ClientEvent::DISCONNECTED: {
             publishClientDisconnected(client.getIp(), msg);
-            // todo: make sure client is closed and remove it from clients vector (use delete client function here)
 
             break;
         }
@@ -72,7 +69,7 @@ void TcpServer::clientEventHandler(const Client &client, ClientEvent event, cons
 }
 
 /*
- * Publish incoming client message to observer.
+ * Publish incomingPacketHandler client message to observer.
  * Observers get only messages that originated
  * from clients with IP address identical to
  * the specific observer requested IP
@@ -162,10 +159,9 @@ void TcpServer::listenToClients(int maxNumOfClients) {
  * If timeout argument equal 0, this function is executed in blocking mode.
  * If timeout argument is > 0 then this function is executed in non-blocking
  * mode (async) and will quit after timeout seconds if no client tried to connect.
- * Return accepted client, or throw error if failed
+ * Return accepted client IP, or throw error if failed
  */
-Client TcpServer::acceptClient(uint timeout) {
-    Client newClient;
+std::string TcpServer::acceptClient(uint timeout) {
     const pipe_ret_t waitingForClient = waitForClient(timeout);
     if (!waitingForClient.isSuccessful()) {
         throw new std::runtime_error(waitingForClient.message());
@@ -183,18 +179,18 @@ Client TcpServer::acceptClient(uint timeout) {
         throw new std::runtime_error(strerror(errno));
     }
 
-    newClient.setFileDescriptor(fileDescriptor);
-    newClient.setConnected();
-    newClient.setIp(inet_ntoa(_clientAddress.sin_addr));
+    Client * newClient = new Client();
+    newClient->setFileDescriptor(fileDescriptor);
+    newClient->setIp(inet_ntoa(_clientAddress.sin_addr));
     using namespace std::placeholders;
-    newClient.setEventsHandler(std::bind(&TcpServer::clientEventHandler, this, _1, _2, _3));
-    newClient.startListen();
+    newClient->setEventsHandler(std::bind(&TcpServer::clientEventHandler, this, _1, _2, _3));
+    newClient->startListen();
     {
         std::lock_guard<std::mutex> lock(_clientsMtx);
         _clients.push_back(newClient);
     }
 
-    return newClient;
+    return newClient->getIp();
 }
 
 pipe_ret_t TcpServer::waitForClient(uint timeout) {
@@ -214,19 +210,20 @@ pipe_ret_t TcpServer::waitForClient(uint timeout) {
         }
 
         if (selectRet == SELECT_FAILED) {
-            pipe_ret_t::failure(strerror(errno));
+            return pipe_ret_t::failure(strerror(errno));
         } else if (selectRet == SELECT_TIMEOUT) {
-            pipe_ret_t::failure("Timeout waiting for client");
+            return pipe_ret_t::failure("Timeout waiting for client");
         } else if (noIncomingClient) {
-            pipe_ret_t::failure("File descriptor is not set");
+            return pipe_ret_t::failure("File descriptor is not set");
         }
     }
 
-    pipe_ret_t::success();
+    return pipe_ret_t::success();
 }
 
 
 //todo: loop once a second and remove dead clients
+// todo: make sure client is closed and remove it from clients vector (use delete client function here)
 
 /*
  * Send message to all connected clients.
@@ -235,8 +232,8 @@ pipe_ret_t TcpServer::waitForClient(uint timeout) {
 pipe_ret_t TcpServer::sendToAllClients(const char * msg, size_t size) {
     std::lock_guard<std::mutex> lock(_clientsMtx);
 
-    for (const Client &client : _clients) {
-        pipe_ret_t sendingResult = sendToClient(client, msg, size);
+    for (const Client *client : _clients) {
+        pipe_ret_t sendingResult = sendToClient(*client, msg, size);
         if (!sendingResult.isSuccessful()) {
             return sendingResult;
         }
@@ -267,9 +264,9 @@ pipe_ret_t TcpServer::close() {
     { // close clients
         std::lock_guard<std::mutex> lock(_clientsMtx);
 
-        for (Client & client : _clients) {
+        for (Client * client : _clients) {
             try {
-                client.close();
+                client->close();
             } catch (const std::runtime_error& error) {
                 return pipe_ret_t::failure(error.what());
             }

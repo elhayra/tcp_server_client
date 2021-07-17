@@ -88,7 +88,7 @@ void TcpClient::unsubscribeAll() {
 }
 
 /*
- * Publish incoming client message to observer.
+ * Publish incomingPacketHandler client message to observer.
  * Observers get only messages that originated
  * from clients with IP address identical to
  * the specific observer requested IP
@@ -96,8 +96,8 @@ void TcpClient::unsubscribeAll() {
 void TcpClient::publishServerMsg(const char * msg, size_t msgSize) {
     std::lock_guard<std::mutex> lock(_subscribersMtx);
     for (uint i=0; i < _subscibers.size(); i++) {
-        if (_subscibers[i].incoming_packet_func != NULL) {
-            (*_subscibers[i].incoming_packet_func)(msg, msgSize);
+        if (_subscibers[i].incomingPacketHandler != NULL) {
+            _subscibers[i].incomingPacketHandler(msg, msgSize);
         }
     }
 }
@@ -111,8 +111,8 @@ void TcpClient::publishServerMsg(const char * msg, size_t msgSize) {
 void TcpClient::publishServerDisconnected(const pipe_ret_t & ret) {
     std::lock_guard<std::mutex> lock(_subscribersMtx);
     for (uint i=0; i < _subscibers.size(); i++) {
-        if (_subscibers[i].disconnected_func != NULL) {
-            (*_subscibers[i].disconnected_func)(ret);
+        if (_subscibers[i].disconnectionHandler != NULL) {
+            _subscibers[i].disconnectionHandler(ret);
         }
     }
 }

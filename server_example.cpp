@@ -12,7 +12,7 @@
 // declare the server
 TcpServer server;
 
-// declare a server observer which will receive incoming messages.
+// declare a server observer which will receive incomingPacketHandler messages.
 // the server supports multiple observers
 server_observer_t observer1, observer2;
 
@@ -77,15 +77,15 @@ int main(int argc, char *argv[])
 
     // configure and register observer2
     observer2.incomingPacketHandler = onIncomingMsg2;
-    observer2.disconnectionHandler = nullptr; // nullptr means we don't care about disconnection
+    observer2.disconnectionHandler = nullptr; // nullptr or not setting this means we don't care about disconnection
     observer2.wantedIP = "10.88.0.11"; // use empty string instead to receive messages from any IP address
     server.subscribe(observer2);
 
     // receive clients
     while(1) {
         try {
-            Client client = server.acceptClient(0);
-            std::cout << "Got client with IP: " << client.getIp() << std::endl;
+            std::string clientIP = server.acceptClient(0);
+            std::cout << "Got client with IP: " << clientIP << std::endl;
             server.printClients();
         } catch (const std::runtime_error &error) {
             std::cout << "Accepting client failed: " << error.what() << std::endl;

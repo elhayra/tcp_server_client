@@ -26,7 +26,7 @@ private:
     struct sockaddr_in _serverAddress;
     struct sockaddr_in _clientAddress;
     fd_set _fds;
-    std::vector<Client> _clients;
+    std::vector<Client*> _clients;
     std::vector<server_observer_t> _subscribers;
 
     std::mutex _subscribersMtx;
@@ -44,7 +44,7 @@ public:
     void initializeSocket();
     void bindAddress(int port);
     void listenToClients(int maxNumOfClients);
-    Client acceptClient(uint timeout);
+    std::string acceptClient(uint timeout);
     bool deleteClient(Client & client);
     void subscribe(const server_observer_t & observer);
     void unsubscribeAll();
