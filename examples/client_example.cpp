@@ -6,7 +6,7 @@
 
 #include <iostream>
 #include <signal.h>
-#include "include/tcp_client.h"
+#include "../include/tcp_client.h"
 
 TcpClient client;
 
@@ -14,7 +14,7 @@ TcpClient client;
 void sig_exit(int s)
 {
 	std::cout << "Closing client..." << std::endl;
-	pipe_ret_t finishRet = client.finish();
+	pipe_ret_t finishRet = client.close();
 	if (finishRet.isSuccessful()) {
 		std::cout << "Client closed." << std::endl;
 	} else {
@@ -25,14 +25,14 @@ void sig_exit(int s)
 
 // observer callback. will be called for every new message received by the server
 void onIncomingMsg(const char * msg, size_t size) {
-	std::cout << "Got msg from server: " << msg << std::endl;
+	std::cout << "Got msg from server (echo): " << msg << std::endl;
 }
 
 // observer callback. will be called when server disconnects
 void onDisconnection(const pipe_ret_t & ret) {
 	std::cout << "Server disconnected: " << ret.message() << std::endl;
 	std::cout << "Closing client..." << std::endl;
-    pipe_ret_t finishRet = client.finish();
+    pipe_ret_t finishRet = client.close();
 	if (finishRet.isSuccessful()) {
 		std::cout << "Client closed." << std::endl;
 	} else {
@@ -40,6 +40,46 @@ void onDisconnection(const pipe_ret_t & ret) {
 	}
 }
 
+void printMenu() {
+    std::cout << "select one of the following options: \n" <<
+                 "1. send message ('hello server') to server\n" <<
+                 "2. close client\n";
+}
+
+int getMenuSelection() {
+   int selection = 0;
+   std::cin >> selection;
+   return selection;
+}
+
+void handleMenuSelection(int selection) {
+    static const int minSelection = 1;
+    static const int maxSelection = 2;
+    if (selection < minSelection || selection > maxSelection) {
+        std::cout << "invalid selection: " << selection <<
+                     ". selection must be b/w " << minSelection << " and " << maxSelection << "\n";
+    }
+    switch (selection) {
+        case 1: { // send message to server
+            std::string msg = "hello server\n";
+            pipe_ret_t sendRet = client.sendMsg(msg.c_str(), msg.size());
+            if (!sendRet.isSuccessful()) {
+                std::cout << "Failed to send msg: " << sendRet.message() << std::endl;
+                break;
+            }
+            break;
+        }
+        case 2: { // close client
+            const pipe_ret_t closeResult = client.close();
+            if (!closeResult.isSuccessful()) {
+                std::cout << "closing client failed: " << closeResult.message() << "\n";
+            } else {
+                std::cout << "closed client successfully\n";
+            }
+            break;
+        }
+    }
+}
 
 int main() {
     //register to SIGINT to close client when user press ctrl+c
@@ -64,13 +104,9 @@ int main() {
 	// send messages to server
 	while(1)
 	{
-		std::string msg = "hello server\n";
-        pipe_ret_t sendRet = client.sendMsg(msg.c_str(), msg.size());
-		if (!sendRet.isSuccessful()) {
-			std::cout << "Failed to send msg: " << sendRet.message() << std::endl;
-			break;
-		}
-		sleep(1);
+        printMenu();
+        int selection = getMenuSelection();
+        handleMenuSelection(selection);
 	}
 }
 

@@ -14,7 +14,7 @@ pipe_ret_t TcpClient::connectTo(const std::string & address, int port) {
         return pipe_ret_t::failure(error.what());
     }
 
-    int connectResult = connect(_sockfd , (struct sockaddr *)&_server , sizeof(_server));
+    int connectResult = connect(_sockfd.get() , (struct sockaddr *)&_server , sizeof(_server));
     const bool connectionFailed = (connectResult == -1);
     if (connectionFailed) {
         return pipe_ret_t::failure(strerror(errno));
@@ -31,12 +31,10 @@ void TcpClient::startReceivingMessages() {
 }
 
 void TcpClient::initializeSocket() {
-    std::lock_guard<std::mutex> lock(_sockfdMtx);
-    _sockfd = 0;
     pipe_ret_t ret;
 
-    _sockfd = socket(AF_INET , SOCK_STREAM , 0);
-    const bool socketFailed = (_sockfd == -1);
+    _sockfd.set(socket(AF_INET , SOCK_STREAM , 0));
+    const bool socketFailed = (_sockfd.get() == -1);
     if (socketFailed) { //socket failed
         throw new std::runtime_error(strerror(errno));
     }
@@ -63,8 +61,7 @@ void TcpClient::setAddress(const std::string& address, int port) {
 pipe_ret_t TcpClient::sendMsg(const char * msg, size_t size) {
     int numBytesSent = 0;
     {
-        std::lock_guard<std::mutex> lock(_sockfdMtx);
-        numBytesSent = send(_sockfd, msg, size, 0);
+        numBytesSent = send(_sockfd.get(), msg, size, 0);
     }
     if (numBytesSent < 0 ) { // send failed
         return pipe_ret_t::failure(strerror(errno));
@@ -125,8 +122,7 @@ void TcpClient::receiveTask() {
         char msg[MAX_PACKET_SIZE];
         int numOfBytesReceived = 0;
         {
-            std::lock_guard<std::mutex> lock(_sockfdMtx);
-            numOfBytesReceived = recv(_sockfd, msg, MAX_PACKET_SIZE, 0);
+            numOfBytesReceived = recv(_sockfd.get(), msg, MAX_PACKET_SIZE, 0);
         }
         if(numOfBytesReceived < 1) {
             _stop = true;
@@ -137,7 +133,7 @@ void TcpClient::receiveTask() {
                 errorMsg = strerror(errno);
             }
             publishServerDisconnected(pipe_ret_t::failure(errorMsg));
-            finish();
+            close();
             break;
         } else {
             publishServerMsg(msg, numOfBytesReceived);
@@ -145,14 +141,13 @@ void TcpClient::receiveTask() {
     }
 }
 
-pipe_ret_t TcpClient::finish(){
+pipe_ret_t TcpClient::close(){
     _stop = true;
     terminateReceiveThread();
     pipe_ret_t ret;
     bool closeFailed = false;
     {
-        std::lock_guard<std::mutex> lock(_sockfdMtx);
-        closeFailed = (close(_sockfd) == -1);
+        closeFailed = (::close(_sockfd.get()) == -1);
     }
     if (closeFailed) {
         return pipe_ret_t::failure(strerror(errno));

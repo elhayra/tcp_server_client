@@ -10,7 +10,8 @@
 #include "../include/client.h"
 #include "../include/common.h"
 
-Client::Client() {
+Client::Client(int fileDescriptor) {
+    _sockfd.set(fileDescriptor);
     setConnected(false);
 }
 
@@ -19,8 +20,7 @@ Client::~Client() {
 }
 
 bool Client::operator==(const Client & other) const {
-    std::lock_guard<std::mutex> lock(_sockfdMtx);
-    if ((this->_sockfd == other._sockfd) &&
+    if ((this->_sockfd.get() == other._sockfd.get()) &&
         (this->_ip == other._ip) ) {
         return true;
     }
@@ -35,8 +35,7 @@ void Client::startListen() {
 void Client::send(const char *msg, size_t size) const {
     size_t numBytesSent;
     {
-        std::lock_guard<std::mutex> lock(_sockfdMtx);
-        numBytesSent = ::send(_sockfd, (char *)msg, size, 0);
+        numBytesSent = ::send(_sockfd.get(), (char *)msg, size, 0);
     }
 
     const bool sendFailed = (numBytesSent < 0);
@@ -60,8 +59,7 @@ void Client::receiveTask() {
         char receivedMessage[MAX_PACKET_SIZE];
         int numOfBytesReceived;
         {
-            std::lock_guard<std::mutex> lock(_sockfdMtx);
-            numOfBytesReceived = recv(_sockfd, receivedMessage, MAX_PACKET_SIZE, 0);
+            numOfBytesReceived = recv(_sockfd.get(), receivedMessage, MAX_PACKET_SIZE, 0);
         }
         if(numOfBytesReceived < 1) {
             const bool clientClosedConnection = (numOfBytesReceived == 0);
@@ -89,7 +87,7 @@ void Client::print() const {
     std::cout << "-----------------\n" <<
               "IP address: " << getIp() << std::endl <<
               "Connected?: " << connected << std::endl <<
-              "Socket FD: " << _sockfd << std::endl;
+              "Socket FD: " << _sockfd.get() << std::endl;
 }
 
 void Client::close() {
@@ -108,8 +106,7 @@ void Client::close() {
 
     int closeClientResult;
     {
-        std::lock_guard<std::mutex> lock(_sockfdMtx);
-        closeClientResult = ::close(_sockfd);
+        closeClientResult = ::close(_sockfd.get());
     }
     const bool closeClientFailed = (closeClientResult == -1);
     if (closeClientFailed) {

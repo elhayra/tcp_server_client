@@ -1,8 +1,10 @@
-//
-// Created by eli on 7/17/21.
-//
+#pragma once
 
-#ifndef TCP_CLIENT_SERVER_FILE_DESCRIPTOR_H
-#define TCP_CLIENT_SERVER_FILE_DESCRIPTOR_H
+class FileDescriptor {
+private:
+    int _sockfd = 0;
 
-#endif //TCP_CLIENT_SERVER_FILE_DESCRIPTOR_H
+public:
+    void set(int fd) { _sockfd = fd; }
+    int get() const { return _sockfd; }
+};

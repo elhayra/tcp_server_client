@@ -4,6 +4,7 @@
 
 //todo: allow running server and client examples together such that it is interactive (maybe use docker-compose?)
 //todo: go over code, improve doc in code and in README
+//todo: option to remove or not remove dead (disconnected) clients
 
 #define SELECT_FAILED -1
 #define SELECT_TIMEOUT 0
@@ -120,15 +121,15 @@ pipe_ret_t TcpServer::start(int port, int maxNumOfClients) {
 }
 
 void TcpServer::initializeSocket() {
-    _sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    const bool socketFailed = (_sockfd == -1);
+    _sockfd.set(socket(AF_INET, SOCK_STREAM, 0));
+    const bool socketFailed = (_sockfd.get() == -1);
     if (socketFailed) {
         throw new std::runtime_error(strerror(errno));
     }
 
     // set socket for reuse (otherwise might have to wait 4 minutes every time socket is closed)
     const int option = 1;
-    setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    setsockopt(_sockfd.get(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 }
 
 void TcpServer::bindAddress(int port) {
@@ -137,7 +138,7 @@ void TcpServer::bindAddress(int port) {
     _serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
     _serverAddress.sin_port = htons(port);
 
-    const int bindResult = bind(_sockfd, (struct sockaddr *)&_serverAddress, sizeof(_serverAddress));
+    const int bindResult = bind(_sockfd.get(), (struct sockaddr *)&_serverAddress, sizeof(_serverAddress));
     const bool bindFailed = (bindResult == -1);
     if (bindFailed) {
         throw new std::runtime_error(strerror(errno));
@@ -146,7 +147,7 @@ void TcpServer::bindAddress(int port) {
 
 void TcpServer::listenToClients(int maxNumOfClients) {
     const int clientsQueueSize = maxNumOfClients;
-    int listenResult = listen(_sockfd, clientsQueueSize);
+    int listenResult = listen(_sockfd.get(), clientsQueueSize);
     const bool listenFailed = (listenResult == -1);
     if (listenFailed) {
         throw new std::runtime_error(strerror(errno));
@@ -170,8 +171,7 @@ std::string TcpServer::acceptClient(uint timeout) {
     int fileDescriptor = -1;
     socklen_t sosize  = sizeof(_clientAddress);
     {
-        std::lock_guard<std::mutex> lock(_sockfdMtx);
-        fileDescriptor = accept(_sockfd, (struct sockaddr*)&_clientAddress, &sosize);
+        fileDescriptor = accept(_sockfd.get(), (struct sockaddr*)&_clientAddress, &sosize);
     }
 
     const bool acceptFailed = (fileDescriptor == -1);
@@ -179,8 +179,7 @@ std::string TcpServer::acceptClient(uint timeout) {
         throw new std::runtime_error(strerror(errno));
     }
 
-    Client * newClient = new Client();
-    newClient->setFileDescriptor(fileDescriptor);
+    Client * newClient = new Client(fileDescriptor);
     newClient->setIp(inet_ntoa(_clientAddress.sin_addr));
     using namespace std::placeholders;
     newClient->setEventsHandler(std::bind(&TcpServer::clientEventHandler, this, _1, _2, _3));
@@ -202,11 +201,10 @@ pipe_ret_t TcpServer::waitForClient(uint timeout) {
         int selectRet = SELECT_FAILED;
         bool noIncomingClient = true;
         {
-            std::lock_guard<std::mutex> lock(_sockfdMtx);
             FD_ZERO(&_fds);
-            FD_SET(_sockfd, &_fds);
-            selectRet = select(_sockfd + 1, &_fds, NULL, NULL, &tv);
-            noIncomingClient = (!FD_ISSET(_sockfd, &_fds));
+            FD_SET(_sockfd.get(), &_fds);
+            selectRet = select(_sockfd.get() + 1, &_fds, NULL, NULL, &tv);
+            noIncomingClient = (!FD_ISSET(_sockfd.get(), &_fds));
         }
 
         if (selectRet == SELECT_FAILED) {
@@ -275,8 +273,7 @@ pipe_ret_t TcpServer::close() {
     }
 
     { // close server
-        std::lock_guard<std::mutex> lock(_sockfdMtx);
-        const int closeServerResult = ::close(_sockfd);
+        const int closeServerResult = ::close(_sockfd.get());
         const bool closeServerFailed = (closeServerResult == -1);
         if (closeServerFailed) {
             return pipe_ret_t::failure(strerror(errno));

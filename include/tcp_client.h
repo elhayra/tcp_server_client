@@ -18,17 +18,20 @@
 #include <atomic>
 #include "client_observer.h"
 #include "pipe_ret_t.h"
+#include "file_descriptor.h"
 
+//todo: document: 'connection refused' - make sure server is running
+//todo: document: play with code - close server while clients are alive, and watch how they receive notification about the server closing
+//todo: document: how to play with the examples
 
 class TcpClient
 {
 private:
-    int _sockfd = 0;
+    FileDescriptor _sockfd;
     std::atomic<bool> _stop;
     struct sockaddr_in _server;
     std::vector<client_observer_t> _subscibers;
     std::thread * _receiveTask = nullptr;
-    std::mutex _sockfdMtx;
     std::mutex _subscribersMtx;
     std::mutex _receiveTaskMtx;
 
@@ -48,8 +51,7 @@ public:
 
     void subscribe(const client_observer_t & observer);
     void unsubscribeAll();
-    void publish(const char * msg, size_t msgSize);
 
-    pipe_ret_t finish();
+    pipe_ret_t close();
 };
 

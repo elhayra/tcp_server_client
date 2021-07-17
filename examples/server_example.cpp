@@ -7,7 +7,7 @@
 #include <iostream>
 #include <signal.h>
 
-#include "include/tcp_server.h"
+#include "../include/tcp_server.h"
 
 // declare the server
 TcpServer server;
@@ -85,7 +85,8 @@ int main(int argc, char *argv[])
     while(1) {
         try {
             std::string clientIP = server.acceptClient(0);
-            std::cout << "Got client with IP: " << clientIP << std::endl;
+            std::cout << "\naccepted new client with IP: " << clientIP << "\n" <<
+                         "== updated list of accepted clients ==" << "\n";
             server.printClients();
         } catch (const std::runtime_error &error) {
             std::cout << "Accepting client failed: " << error.what() << std::endl;

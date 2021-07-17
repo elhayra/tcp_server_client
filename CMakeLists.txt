@@ -10,8 +10,7 @@ add_library(${PROJECT_NAME}
         src/tcp_client.cpp
         src/tcp_server.cpp
         src/client.cpp
-        src/common.cpp
-        src/pipe_ret_t.cpp)
+        src/pipe_ret_t.cpp include/file_descriptor.h)
 
 option(SERVER_EXAMPLE "Build SERVER" ON)
 
@@ -21,7 +20,7 @@ if(SERVER_EXAMPLE)
             -DSERVER_EXAMPLE
     )
 
-    add_executable(tcp_server server_example.cpp)
+    add_executable(tcp_server examples/server_example.cpp)
 
     target_link_libraries (tcp_server ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
@@ -35,7 +34,7 @@ if(CLIENT_EXAMPLE)
             -DCLIENT_EXAMPLE
     )
 
-    add_executable(tcp_client client_example.cpp)
+    add_executable(tcp_client examples/client_example.cpp)
 
     target_link_libraries (tcp_client ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 

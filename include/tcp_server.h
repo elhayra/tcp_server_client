@@ -17,12 +17,13 @@
 #include "client.h"
 #include "server_observer.h"
 #include "pipe_ret_t.h"
+#include "file_descriptor.h"
 
 class TcpServer {
 
 private:
 
-    int _sockfd;
+    FileDescriptor _sockfd;
     struct sockaddr_in _serverAddress;
     struct sockaddr_in _clientAddress;
     fd_set _fds;
@@ -31,7 +32,6 @@ private:
 
     std::mutex _subscribersMtx;
     std::mutex _clientsMtx;
-    std::mutex _sockfdMtx;
 
     void publishClientMsg(const Client & client, const char * msg, size_t msgSize);
     void publishClientDisconnected(const std::string&, const std::string&);
