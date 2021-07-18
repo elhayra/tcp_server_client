@@ -18,7 +18,7 @@ pipe_ret_t TcpClient::connectTo(const std::string & address, int port) {
         return pipe_ret_t::failure(error.what());
     }
 
-    int connectResult = connect(_sockfd.get() , (struct sockaddr *)&_server , sizeof(_server));
+    const int connectResult = connect(_sockfd.get() , (struct sockaddr *)&_server , sizeof(_server));
     const bool connectionFailed = (connectResult == -1);
     if (connectionFailed) {
         return pipe_ret_t::failure(strerror(errno));
@@ -44,7 +44,7 @@ void TcpClient::initializeSocket() {
 }
 
 void TcpClient::setAddress(const std::string& address, int port) {
-    int inetSuccess = inet_aton(address.c_str(), &_server.sin_addr);
+    const int inetSuccess = inet_aton(address.c_str(), &_server.sin_addr);
 
     if(!inetSuccess) { // inet_addr failed to parse address
         // if hostname is not in IP strings and dots format, try resolve it
@@ -62,10 +62,8 @@ void TcpClient::setAddress(const std::string& address, int port) {
 
 
 pipe_ret_t TcpClient::sendMsg(const char * msg, size_t size) {
-    int numBytesSent = 0;
-    {
-        numBytesSent = send(_sockfd.get(), msg, size, 0);
-    }
+    const size_t numBytesSent = send(_sockfd.get(), msg, size, 0);
+
     if (numBytesSent < 0 ) { // send failed
         return pipe_ret_t::failure(strerror(errno));
     }
@@ -123,10 +121,8 @@ void TcpClient::publishServerDisconnected(const pipe_ret_t & ret) {
 void TcpClient::receiveTask() {
     while(!_stop) {
         char msg[MAX_PACKET_SIZE];
-        int numOfBytesReceived = 0;
-        {
-            numOfBytesReceived = recv(_sockfd.get(), msg, MAX_PACKET_SIZE, 0);
-        }
+        const size_t numOfBytesReceived = recv(_sockfd.get(), msg, MAX_PACKET_SIZE, 0);
+
         if(numOfBytesReceived < 1) {
             std::string errorMsg;
             if (numOfBytesReceived == 0) { //server closed connection
@@ -156,10 +152,7 @@ void TcpClient::terminateReceiveThread() {
 pipe_ret_t TcpClient::close(){
     terminateReceiveThread();
 
-    bool closeFailed;
-    {
-        closeFailed = (::close(_sockfd.get()) == -1);
-    }
+    const bool closeFailed = (::close(_sockfd.get()) == -1);
     if (closeFailed) {
         return pipe_ret_t::failure(strerror(errno));
     }

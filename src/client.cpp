@@ -29,10 +29,7 @@ void Client::startListen() {
 }
 
 void Client::send(const char *msg, size_t size) const {
-    size_t numBytesSent;
-    {
-        numBytesSent = ::send(_sockfd.get(), (char *)msg, size, 0);
-    }
+    const size_t numBytesSent = ::send(_sockfd.get(), (char *)msg, size, 0);
 
     const bool sendFailed = (numBytesSent < 0);
     if (sendFailed) {
@@ -53,10 +50,8 @@ void Client::send(const char *msg, size_t size) const {
 void Client::receiveTask() {
     while(isConnected()) {
         char receivedMessage[MAX_PACKET_SIZE];
-        int numOfBytesReceived;
-        {
-            numOfBytesReceived = recv(_sockfd.get(), receivedMessage, MAX_PACKET_SIZE, 0);
-        }
+        const size_t numOfBytesReceived = recv(_sockfd.get(), receivedMessage, MAX_PACKET_SIZE, 0);
+
         if(numOfBytesReceived < 1) {
             const bool clientClosedConnection = (numOfBytesReceived == 0);
             std::string disconnectionMessage;
@@ -99,10 +94,7 @@ void Client::terminateReceiveThread() {
 void Client::close() {
     terminateReceiveThread();
 
-    bool closeFailed;
-    {
-        closeFailed = (::close(_sockfd.get()) == -1);
-    }
+    const bool closeFailed = (::close(_sockfd.get()) == -1);
     if (closeFailed) {
         throw pipe_ret_t::failure(strerror(errno));
     }

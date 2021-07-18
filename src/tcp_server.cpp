@@ -70,7 +70,6 @@ void TcpServer::clientEventHandler(const Client &client, ClientEvent event, cons
     switch (event) {
         case ClientEvent::DISCONNECTED: {
             publishClientDisconnected(client.getIp(), msg);
-
             break;
         }
         case ClientEvent::INCOMING_MSG: {
@@ -158,8 +157,7 @@ void TcpServer::bindAddress(int port) {
 
 void TcpServer::listenToClients(int maxNumOfClients) {
     const int clientsQueueSize = maxNumOfClients;
-    int listenResult = listen(_sockfd.get(), clientsQueueSize);
-    const bool listenFailed = (listenResult == -1);
+    const bool listenFailed = (listen(_sockfd.get(), clientsQueueSize) == -1);
     if (listenFailed) {
         throw new std::runtime_error(strerror(errno));
     }
@@ -179,11 +177,8 @@ std::string TcpServer::acceptClient(uint timeout) {
         throw new std::runtime_error(waitingForClient.message());
     }
 
-    int fileDescriptor = -1;
     socklen_t sosize  = sizeof(_clientAddress);
-    {
-        fileDescriptor = accept(_sockfd.get(), (struct sockaddr*)&_clientAddress, &sosize);
-    }
+    const int fileDescriptor = accept(_sockfd.get(), (struct sockaddr*)&_clientAddress, &sosize);
 
     const bool acceptFailed = (fileDescriptor == -1);
     if (acceptFailed) {
@@ -195,10 +190,9 @@ std::string TcpServer::acceptClient(uint timeout) {
     using namespace std::placeholders;
     newClient->setEventsHandler(std::bind(&TcpServer::clientEventHandler, this, _1, _2, _3));
     newClient->startListen();
-    {
-        std::lock_guard<std::mutex> lock(_clientsMtx);
-        _clients.push_back(newClient);
-    }
+
+    std::lock_guard<std::mutex> lock(_clientsMtx);
+    _clients.push_back(newClient);
 
     return newClient->getIp();
 }
@@ -209,14 +203,10 @@ pipe_ret_t TcpServer::waitForClient(uint timeout) {
         tv.tv_sec = timeout;
         tv.tv_usec = 0;
 
-        int selectRet = SELECT_FAILED;
-        bool noIncomingClient = true;
-        {
-            FD_ZERO(&_fds);
-            FD_SET(_sockfd.get(), &_fds);
-            selectRet = select(_sockfd.get() + 1, &_fds, NULL, NULL, &tv);
-            noIncomingClient = (!FD_ISSET(_sockfd.get(), &_fds));
-        }
+        FD_ZERO(&_fds);
+        FD_SET(_sockfd.get(), &_fds);
+        const int selectRet = select(_sockfd.get() + 1, &_fds, NULL, NULL, &tv);
+        const bool noIncomingClient = (!FD_ISSET(_sockfd.get(), &_fds));
 
         if (selectRet == SELECT_FAILED) {
             return pipe_ret_t::failure(strerror(errno));
@@ -242,7 +232,7 @@ pipe_ret_t TcpServer::sendToAllClients(const char * msg, size_t size) {
     std::lock_guard<std::mutex> lock(_clientsMtx);
 
     for (const Client *client : _clients) {
-        pipe_ret_t sendingResult = sendToClient(*client, msg, size);
+        const pipe_ret_t sendingResult = sendToClient(*client, msg, size);
         if (!sendingResult.isSuccessful()) {
             return sendingResult;
         }
