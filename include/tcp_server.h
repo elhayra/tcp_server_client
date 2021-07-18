@@ -23,7 +23,6 @@ class TcpServer {
 
 private:
 
-    bool _isClosed {true};
     FileDescriptor _sockfd;
     struct sockaddr_in _serverAddress;
     struct sockaddr_in _clientAddress;
@@ -33,7 +32,6 @@ private:
 
     std::mutex _subscribersMtx;
     std::mutex _clientsMtx;
-    std::mutex _closingMtx;
 
 
     void publishClientMsg(const Client & client, const char * msg, size_t msgSize);

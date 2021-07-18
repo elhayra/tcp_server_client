@@ -5,6 +5,7 @@
 //todo: allow running server and client examples together such that it is interactive (maybe use docker-compose?)
 //todo: go over code, improve doc in code and in README
 //todo: option to remove or not remove dead (disconnected) clients
+//todo: d
 
 #define SELECT_FAILED -1
 #define SELECT_TIMEOUT 0
@@ -37,14 +38,12 @@ void TcpServer::printClients() {
 }
 
 int TcpServer::findClientIndexByIP(const std::string &ip) {
-    int clientIndex = -1;
     for (uint i=0; i < _clients.size(); i++) {
         if (_clients[i]->getIp() == ip) {
-            clientIndex = i;
-            break;
+            return i;
         }
     }
-    return clientIndex;
+    return -1;
 }
 
 /*
@@ -58,7 +57,9 @@ bool TcpServer::deleteClient(const std::string &clientIP) {
     const int clientIndex = findClientIndexByIP(clientIP);
 
     if (clientIndex > -1) {
-        delete _clients[clientIndex];
+        Client * clientToDelete = _clients[clientIndex];
+        clientToDelete->close();
+        delete clientToDelete;
         _clients.erase(_clients.begin() + clientIndex);
         return true;
     }
@@ -127,7 +128,6 @@ pipe_ret_t TcpServer::start(int port, int maxNumOfClients) {
     } catch (const std::runtime_error &error) {
         return pipe_ret_t::failure(error.what());
     }
-    _isClosed = false;
     return pipe_ret_t::success();
 }
 
@@ -281,12 +281,6 @@ pipe_ret_t TcpServer::sendToClient(const std::string & clientIP, const char * ms
  * Return true is successFlag, false otherwise
  */
 pipe_ret_t TcpServer::close() {
-    if (_isClosed) {
-       return pipe_ret_t::failure("server is already closed");
-    }
-
-    std::lock_guard<std::mutex> closingLock(_closingMtx);
-
     { // close clients
         std::lock_guard<std::mutex> lock(_clientsMtx);
 
@@ -301,7 +295,6 @@ pipe_ret_t TcpServer::close() {
     }
 
     { // close server
-        _isClosed = true;
         const int closeServerResult = ::close(_sockfd.get());
         const bool closeServerFailed = (closeServerResult == -1);
         if (closeServerFailed) {

@@ -15,10 +15,6 @@ Client::Client(int fileDescriptor) {
     setConnected(false);
 }
 
-Client::~Client() {
-    close();
-}
-
 bool Client::operator==(const Client & other) const {
     if ((this->_sockfd.get() == other._sockfd.get()) &&
         (this->_ip == other._ip) ) {
@@ -29,7 +25,7 @@ bool Client::operator==(const Client & other) const {
 
 void Client::startListen() {
     setConnected(true);
-    _threadHandler = new std::thread(&Client::receiveTask, this);
+    _receiveThread = new std::thread(&Client::receiveTask, this);
 }
 
 void Client::send(const char *msg, size_t size) const {
@@ -69,9 +65,9 @@ void Client::receiveTask() {
             } else {
                 disconnectionMessage = strerror(errno);
             }
-            close();
+            setConnected(false);
             publishEvent(ClientEvent::DISCONNECTED, disconnectionMessage);
-            break;
+            return;
         } else {
             publishEvent(ClientEvent::INCOMING_MSG, receivedMessage);
         }
@@ -90,27 +86,25 @@ void Client::print() const {
               "Socket FD: " << _sockfd.get() << std::endl;
 }
 
-void Client::close() {
-    if (!isConnected()) { // already closed
-        return;
-    }
-
+void Client::terminateReceiveThread() {
     setConnected(false);
 
-    if (_threadHandler) {
-        _threadHandler->join();
-        _threadHandler->detach();
-        delete _threadHandler;
-        _threadHandler = nullptr;
+    if (_receiveThread) {
+        _receiveThread->join();
+        delete _receiveThread;
+        _receiveThread = nullptr;
     }
+}
 
-    int closeClientResult;
+void Client::close() {
+    terminateReceiveThread();
+
+    bool closeFailed;
     {
-        closeClientResult = ::close(_sockfd.get());
+        closeFailed = (::close(_sockfd.get()) == -1);
     }
-    const bool closeClientFailed = (closeClientResult == -1);
-    if (closeClientFailed) {
-        throw new std::runtime_error(strerror(errno));
+    if (closeFailed) {
+        throw pipe_ret_t::failure(strerror(errno));
     }
 }
 

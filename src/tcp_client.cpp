@@ -7,7 +7,7 @@ TcpClient::TcpClient() {
 }
 
 TcpClient::~TcpClient() {
-    terminateReceiveThread();
+    close();
 }
 
 pipe_ret_t TcpClient::connectTo(const std::string & address, int port) {
@@ -30,7 +30,6 @@ pipe_ret_t TcpClient::connectTo(const std::string & address, int port) {
 }
 
 void TcpClient::startReceivingMessages() {
-    std::lock_guard<std::mutex> lock(_receiveTaskMtx);
     _receiveTask = new std::thread(&TcpClient::receiveTask, this);
 }
 
@@ -129,27 +128,35 @@ void TcpClient::receiveTask() {
             numOfBytesReceived = recv(_sockfd.get(), msg, MAX_PACKET_SIZE, 0);
         }
         if(numOfBytesReceived < 1) {
-            _stop = true;
             std::string errorMsg;
             if (numOfBytesReceived == 0) { //server closed connection
                 errorMsg = "Server closed connection";
             } else {
                 errorMsg = strerror(errno);
             }
+            _stop = true;
             publishServerDisconnected(pipe_ret_t::failure(errorMsg));
-            close();
-            break;
+            return;
         } else {
             publishServerMsg(msg, numOfBytesReceived);
         }
     }
 }
 
-pipe_ret_t TcpClient::close(){
+void TcpClient::terminateReceiveThread() {
     _stop = true;
+
+    if (_receiveTask) {
+        _receiveTask->join();
+        delete _receiveTask;
+        _receiveTask = nullptr;
+    }
+}
+
+pipe_ret_t TcpClient::close(){
     terminateReceiveThread();
-    pipe_ret_t ret;
-    bool closeFailed = false;
+
+    bool closeFailed;
     {
         closeFailed = (::close(_sockfd.get()) == -1);
     }
@@ -159,12 +166,4 @@ pipe_ret_t TcpClient::close(){
     return pipe_ret_t::success();
 }
 
-void TcpClient::terminateReceiveThread() {
-    std::lock_guard<std::mutex> lock(_receiveTaskMtx);
-    if (_receiveTask != nullptr) {
-        _receiveTask->detach();
-        delete _receiveTask;
-        _receiveTask = nullptr;
-    }
-}
 

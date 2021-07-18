@@ -39,7 +39,6 @@ private:
     std::vector<client_observer_t> _subscibers;
     std::thread * _receiveTask = nullptr;
     std::mutex _subscribersMtx;
-    std::mutex _receiveTaskMtx;
 
     void initializeSocket();
     void startReceivingMessages();
