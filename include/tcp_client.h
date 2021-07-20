@@ -9,14 +9,23 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+#ifdef WIN32
+#pragma comment(lib, "Ws2_32.lib")
+#include <io.h>
+#include <process.h>
+#include <WS2tcpip.h>
+#include <winsock.h>
+#include <WinSock2.h>
+typedef unsigned int uint;
+#else
+#include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <netdb.h>
+#endif // WIN32
 #include <vector>
 #include <errno.h>
 #include <thread>

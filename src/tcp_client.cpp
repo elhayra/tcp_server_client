@@ -2,35 +2,52 @@
 #include "../include/tcp_client.h"
 
 
-pipe_ret_t TcpClient::connectTo(const std::string & address, int port) {
+
+pipe_ret_t TcpClient::connectTo(const std::string& address, int port) {
     m_sockfd = 0;
     pipe_ret_t ret;
 
-    m_sockfd = socket(AF_INET , SOCK_STREAM , 0);
+#ifdef WIN32
+    WORD wVersionRequested;
+    WSADATA wsaData;
+    int err;
+    wVersionRequested = MAKEWORD(1, 1);
+    err = WSAStartup(wVersionRequested, &wsaData);
+    if (err != 0)
+    {
+        perror("WSAStartup error");
+    }
+#endif // WIN32
+
+    m_sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (m_sockfd == -1) { //socket failed
         ret.success = false;
         ret.msg = strerror(errno);
         return ret;
     }
 
+#ifdef WIN32
+    int inetSuccess = inet_pton(AF_INET, address.c_str(), &m_server.sin_addr.s_addr);
+#else
     int inetSuccess = inet_aton(address.c_str(), &m_server.sin_addr);
+#endif // WIN32
 
-    if(!inetSuccess) { // inet_addr failed to parse address
+    if (!inetSuccess) { // inet_addr failed to parse address
         // if hostname is not in IP strings and dots format, try resolve it
-        struct hostent *host;
-        struct in_addr **addrList;
-        if ( (host = gethostbyname( address.c_str() ) ) == NULL){
+        struct hostent* host;
+        struct in_addr** addrList;
+        if ((host = gethostbyname(address.c_str())) == NULL) {
             ret.success = false;
             ret.msg = "Failed to resolve hostname";
             return ret;
         }
-        addrList = (struct in_addr **) host->h_addr_list;
+        addrList = (struct in_addr**)host->h_addr_list;
         m_server.sin_addr = *addrList[0];
     }
     m_server.sin_family = AF_INET;
-    m_server.sin_port = htons( port );
+    m_server.sin_port = htons(port);
 
-    int connectRet = connect(m_sockfd , (struct sockaddr *)&m_server , sizeof(m_server));
+    int connectRet = connect(m_sockfd, (struct sockaddr*)&m_server, sizeof(m_server));
     if (connectRet == -1) {
         ret.success = false;
         ret.msg = strerror(errno);
@@ -101,9 +118,9 @@ void TcpClient::publishServerDisconnected(const pipe_ret_t & ret) {
  * Receive server packets, and notify user
  */
 void TcpClient::ReceiveTask() {
-
+    char msg[MAX_PACKET_SIZE];
     while(!stop) {
-        char msg[MAX_PACKET_SIZE];
+        memset(msg, 0, sizeof msg);
         int numOfBytesReceived = recv(m_sockfd, msg, MAX_PACKET_SIZE, 0);
         if(numOfBytesReceived < 1) {
             pipe_ret_t ret;
@@ -127,7 +144,11 @@ pipe_ret_t TcpClient::finish(){
     stop = true;
     terminateReceiveThread();
     pipe_ret_t ret;
+#ifdef WIN32
+    if (closesocket(m_sockfd) == -1) { // close failed
+#else
     if (close(m_sockfd) == -1) { // close failed
+#endif // WIN32
         ret.success = false;
         ret.msg = strerror(errno);
         return ret;

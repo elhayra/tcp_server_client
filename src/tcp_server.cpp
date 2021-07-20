@@ -27,9 +27,9 @@ void TcpServer::printClients() {
 void TcpServer::receiveTask(/*TcpServer *context*/) {
 
     Client * client = &m_clients.back();
-
+    char msg[MAX_PACKET_SIZE];
     while(client->isConnected()) {
-        char msg[MAX_PACKET_SIZE];
+        memset(msg, 0, sizeof msg);
         int numOfBytesReceived = recv(client->getFileDescriptor(), msg, MAX_PACKET_SIZE, 0);
         if(numOfBytesReceived < 1) {
             client->setDisconnected();
@@ -39,7 +39,11 @@ void TcpServer::receiveTask(/*TcpServer *context*/) {
             } else {
                 client->setErrorMessage(strerror(errno));
             }
+#ifdef WIN32
+            closesocket(client->getFileDescriptor());
+#else
             close(client->getFileDescriptor());
+#endif // WIN32
             publishClientDisconnected(*client);
             deleteClient(*client);
             break;
@@ -110,6 +114,18 @@ pipe_ret_t TcpServer::start(int port) {
     m_clients.reserve(10);
     m_subscibers.reserve(10);
     pipe_ret_t ret;
+#ifdef WIN32
+    WORD wVersionRequested;
+    WSADATA wsaData;
+    int err;
+    wVersionRequested = MAKEWORD(1, 1);
+    err = WSAStartup(wVersionRequested, &wsaData);
+    if (err != 0)
+    {
+        perror("WSAStartup error");
+    }
+#endif // WIN32
+
 
     m_sockfd = socket(AF_INET,SOCK_STREAM,0);
     if (m_sockfd == -1) { //socket failed
@@ -119,7 +135,13 @@ pipe_ret_t TcpServer::start(int port) {
     }
     // set socket for reuse (otherwise might have to wait 4 minutes every time socket is closed)
     int option = 1;
+#ifdef WIN32
+    setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&option, sizeof(option));
+#else
     setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+#endif // WIN32
+
+   
 
     memset(&m_serverAddress, 0, sizeof(m_serverAddress));
     m_serverAddress.sin_family = AF_INET;
@@ -152,7 +174,7 @@ pipe_ret_t TcpServer::start(int port) {
  * Return accepted client
  */
 Client TcpServer::acceptClient(uint timeout) {
-    socklen_t sosize  = sizeof(m_clientAddress);
+    int sosize  = sizeof(m_clientAddress);
     Client newClient;
 
     if (timeout > 0) {
@@ -236,13 +258,21 @@ pipe_ret_t TcpServer::finish() {
     pipe_ret_t ret;
     for (uint i=0; i<m_clients.size(); i++) {
         m_clients[i].setDisconnected();
+#ifdef WIN32
+        if (closesocket(m_clients[i].getFileDescriptor()) == -1) { // close failed
+#else
         if (close(m_clients[i].getFileDescriptor()) == -1) { // close failed
+#endif
             ret.success = false;
             ret.msg = strerror(errno);
             return ret;
         }
     }
+#ifdef WIN32
+    if (closesocket(m_sockfd) == -1) { // close failed
+#else
     if (close(m_sockfd) == -1) { // close failed
+#endif
         ret.success = false;
         ret.msg = strerror(errno);
         return ret;

@@ -8,11 +8,19 @@
 #include <vector>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+
 #include <sys/types.h>
+#ifdef WIN32
+#include <io.h>
+#include <process.h>
+#include <windows.h>
+typedef unsigned int uint;
+#else
+#include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif // WIN32
 #include <thread>
 #include <functional>
 #include <cstring>
