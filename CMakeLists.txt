@@ -10,7 +10,8 @@ add_library(${PROJECT_NAME}
         src/tcp_client.cpp
         src/tcp_server.cpp
         src/client.cpp
-        src/pipe_ret_t.cpp include/file_descriptor.h)
+        src/pipe_ret_t.cpp
+        src/common.cpp)
 
 option(SERVER_EXAMPLE "Build SERVER" ON)
 

@@ -48,6 +48,14 @@ void Client::send(const char *msg, size_t msgSize) const {
  */
 void Client::receiveTask() {
     while(isConnected()) {
+        const socket_waiter::Result waitResult = socket_waiter::waitFor(_sockfd);
+
+        if (waitResult == socket_waiter::Result::FAILURE) {
+            throw std::runtime_error(strerror(errno));
+        } else if (waitResult == socket_waiter::Result::TIMEOUT) {
+            continue;
+        }
+
         char receivedMessage[MAX_PACKET_SIZE];
         const size_t numOfBytesReceived = recv(_sockfd.get(), receivedMessage, MAX_PACKET_SIZE, 0);
 

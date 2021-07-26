@@ -47,9 +47,13 @@ void printMenu() {
 }
 
 int getMenuSelection() {
-   int selection = 0;
-   std::cin >> selection;
-   return selection;
+    int selection = 0;
+    std::cin >> selection;
+    if (!std::cin) {
+        throw std::runtime_error("invalid menu input. expected a number, but got something else");
+    }
+    std::cin.ignore (std::numeric_limits<std::streamsize>::max(), '\n');
+    return selection;
 }
 
 bool handleMenuSelection(int selection) {
@@ -58,6 +62,7 @@ bool handleMenuSelection(int selection) {
     if (selection < minSelection || selection > maxSelection) {
         std::cout << "invalid selection: " << selection <<
                      ". selection must be b/w " << minSelection << " and " << maxSelection << "\n";
+        return false;
     }
     switch (selection) {
         case 1: { // send message to server

@@ -3,13 +3,12 @@
 #include <thread>
 #include <algorithm>
 #include "../include/tcp_server.h"
+#include "../include/common.h"
 
 //todo: allow running server and client examples together such that it is interactive (maybe use docker-compose?)
 //todo: go over code, improve doc in code and in README
 //todo: option to remove or not remove dead (disconnected) clients
 
-#define SELECT_FAILED -1
-#define SELECT_TIMEOUT 0
 
 
 TcpServer::TcpServer() {
@@ -29,6 +28,9 @@ void TcpServer::subscribe(const server_observer_t & observer) {
 
 void TcpServer::printClients() {
     std::lock_guard<std::mutex> lock(_clientsMtx);
+    if (_clients.empty()) {
+        std::cout << "no connected clients\n";
+    }
     for (const Client *client : _clients) {
         client->print();
     }
@@ -200,18 +202,12 @@ std::string TcpServer::acceptClient(uint timeout) {
 
 pipe_ret_t TcpServer::waitForClient(uint timeout) {
     if (timeout > 0) {
-        struct timeval tv;
-        tv.tv_sec = timeout;
-        tv.tv_usec = 0;
-
-        FD_ZERO(&_fds);
-        FD_SET(_sockfd.get(), &_fds);
-        const int selectRet = select(_sockfd.get() + 1, &_fds, nullptr, nullptr, &tv);
+        const socket_waiter::Result waitResult = socket_waiter::waitFor(_sockfd);
         const bool noIncomingClient = (!FD_ISSET(_sockfd.get(), &_fds));
 
-        if (selectRet == SELECT_FAILED) {
+        if (waitResult == socket_waiter::Result::FAILURE) {
             return pipe_ret_t::failure(strerror(errno));
-        } else if (selectRet == SELECT_TIMEOUT) {
+        } else if (waitResult == socket_waiter::Result::TIMEOUT) {
             return pipe_ret_t::failure("Timeout waiting for client");
         } else if (noIncomingClient) {
             return pipe_ret_t::failure("File descriptor is not set");
@@ -276,7 +272,6 @@ pipe_ret_t TcpServer::sendToClient(const std::string & clientIP, const char * ms
  */
 pipe_ret_t TcpServer::close() {
     terminateDeadClientsRemover();
-
     { // close clients
         std::lock_guard<std::mutex> lock(_clientsMtx);
 

@@ -115,6 +115,14 @@ void TcpClient::publishServerDisconnected(const pipe_ret_t & ret) {
  */
 void TcpClient::receiveTask() {
     while(!_stop) {
+        const socket_waiter::Result waitResult = socket_waiter::waitFor(_sockfd);
+
+        if (waitResult == socket_waiter::Result::FAILURE) {
+            throw std::runtime_error(strerror(errno));
+        } else if (waitResult == socket_waiter::Result::TIMEOUT) {
+            continue;
+        }
+
         char msg[MAX_PACKET_SIZE];
         const size_t numOfBytesReceived = recv(_sockfd.get(), msg, MAX_PACKET_SIZE, 0);
 

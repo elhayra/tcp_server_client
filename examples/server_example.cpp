@@ -9,6 +9,10 @@
 
 #include "../include/tcp_server.h"
 
+//todo: bug: closing server when client is connected, close server nicely, but tcp_client code crahses
+//todo: bug: closing client with exception / killing it, cause server dead lock when trying to remove dead client
+//todo: document 'removing dead client' message, when closing tcp_client_example
+
 // declare the server
 TcpServer server;
 
@@ -80,6 +84,9 @@ void printMenu() {
 int getMenuSelection() {
     int selection = 0;
     std::cin >> selection;
+    if (!std::cin) {
+        throw std::runtime_error("invalid menu input. expected a number, but got something else");
+    }
     std::cin.ignore (std::numeric_limits<std::streamsize>::max(), '\n');
     return selection;
 }
@@ -94,6 +101,7 @@ bool handleMenuSelection(int selection) {
     if (selection < minSelection || selection > maxSelection) {
         std::cout << "invalid selection: " << selection <<
                   ". selection must be b/w " << minSelection << " and " << maxSelection << "\n";
+        return false;
     }
     switch (selection) {
         case 1: { // send all clients a message
