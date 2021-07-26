@@ -34,7 +34,8 @@ class TcpClient
 {
 private:
     FileDescriptor _sockfd;
-    std::atomic<bool> _stop;
+    std::atomic<bool> _isConnected;
+    std::atomic<bool> _isClosed;
     struct sockaddr_in _server;
     std::vector<client_observer_t> _subscibers;
     std::thread * _receiveTask = nullptr;
@@ -55,7 +56,7 @@ public:
     pipe_ret_t sendMsg(const char * msg, size_t size);
 
     void subscribe(const client_observer_t & observer);
-
+    bool isConnected() const { return _isConnected; }
     pipe_ret_t close();
 };
 

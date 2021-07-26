@@ -28,16 +28,14 @@ void onIncomingMsg(const char * msg, size_t size) {
 	std::cout << "Got msg from server (echo): " << msg << std::endl;
 }
 
+//todo: DOCUMENT: never call tcp_client or tcp_server functions in their subscribers CB functions,
+// todo: this may cause dead lock (e.g. don't call client.close()) in this function. (client will be closed automatically in such case)
+// todo: the CB functions should be called quickly and return, because they are called in
+// todo: the context of the tcp_client / server-client
+
 // observer callback. will be called when server disconnects
 void onDisconnection(const pipe_ret_t & ret) {
 	std::cout << "Server disconnected: " << ret.message() << std::endl;
-	std::cout << "Closing client..." << std::endl;
-    pipe_ret_t finishRet = client.close();
-	if (finishRet.isSuccessful()) {
-		std::cout << "Client closed." << std::endl;
-	} else {
-		std::cout << "Failed to close client: " << finishRet.message() << std::endl;
-	}
 }
 
 void printMenu() {

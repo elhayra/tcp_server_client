@@ -3,7 +3,8 @@
 #include "../include/common.h"
 
 TcpClient::TcpClient() {
-    _stop = false;
+    _isConnected = false;
+    _isClosed = true;
 }
 
 TcpClient::~TcpClient() {
@@ -25,6 +26,8 @@ pipe_ret_t TcpClient::connectTo(const std::string & address, int port) {
     }
 
     startReceivingMessages();
+    _isConnected = true;
+    _isClosed = false;
 
     return pipe_ret_t::success();
 }
@@ -114,7 +117,7 @@ void TcpClient::publishServerDisconnected(const pipe_ret_t & ret) {
  * Receive server packets, and notify user
  */
 void TcpClient::receiveTask() {
-    while(!_stop) {
+    while(_isConnected) {
         const socket_waiter::Result waitResult = socket_waiter::waitFor(_sockfd);
 
         if (waitResult == socket_waiter::Result::FAILURE) {
@@ -133,7 +136,7 @@ void TcpClient::receiveTask() {
             } else {
                 errorMsg = strerror(errno);
             }
-            _stop = true;
+            _isConnected = false;
             publishServerDisconnected(pipe_ret_t::failure(errorMsg));
             return;
         } else {
@@ -143,7 +146,7 @@ void TcpClient::receiveTask() {
 }
 
 void TcpClient::terminateReceiveThread() {
-    _stop = true;
+    _isConnected = false;
 
     if (_receiveTask) {
         _receiveTask->join();
@@ -153,12 +156,16 @@ void TcpClient::terminateReceiveThread() {
 }
 
 pipe_ret_t TcpClient::close(){
+    if (_isClosed) {
+        return pipe_ret_t::failure("client is already closed");
+    }
     terminateReceiveThread();
 
     const bool closeFailed = (::close(_sockfd.get()) == -1);
     if (closeFailed) {
         return pipe_ret_t::failure(strerror(errno));
     }
+    _isClosed = true;
     return pipe_ret_t::success();
 }
 

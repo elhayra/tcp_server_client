@@ -162,7 +162,7 @@ int main()
 
     // accept a single client. call this function
     // in a loop to accept multiple clients.
-    acceptClient();
+    acceptClient(); //TODO: accept clients in a loop in the background
 
     bool shouldTerminate = false;
     while(!shouldTerminate) {
