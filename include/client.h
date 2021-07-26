@@ -44,7 +44,7 @@ public:
 
     void startListen();
 
-    void send(const char * msg, size_t size) const;
+    void send(const char * msg, size_t msgSize) const;
 
     void close();
 

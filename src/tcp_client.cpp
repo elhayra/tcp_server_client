@@ -39,7 +39,7 @@ void TcpClient::initializeSocket() {
     _sockfd.set(socket(AF_INET , SOCK_STREAM , 0));
     const bool socketFailed = (_sockfd.get() == -1);
     if (socketFailed) { //socket failed
-        throw new std::runtime_error(strerror(errno));
+        throw std::runtime_error(strerror(errno));
     }
 }
 
@@ -50,8 +50,8 @@ void TcpClient::setAddress(const std::string& address, int port) {
         // if hostname is not in IP strings and dots format, try resolve it
         struct hostent *host;
         struct in_addr **addrList;
-        if ( (host = gethostbyname( address.c_str() ) ) == NULL){
-            throw new std::runtime_error("Failed to resolve hostname");
+        if ( (host = gethostbyname( address.c_str() ) ) == nullptr){
+            throw std::runtime_error("Failed to resolve hostname");
         }
         addrList = (struct in_addr **) host->h_addr_list;
         _server.sin_addr = *addrList[0];
@@ -69,7 +69,7 @@ pipe_ret_t TcpClient::sendMsg(const char * msg, size_t size) {
     }
     if ((uint)numBytesSent < size) { // not all bytes were sent
         char errorMsg[100];
-        sprintf(errorMsg, "Only %d bytes out of %lu was sent to client", numBytesSent, size);
+        sprintf(errorMsg, "Only %lu bytes out of %lu was sent to client", numBytesSent, size);
         return pipe_ret_t::failure(errorMsg);
     }
     return pipe_ret_t::success();
@@ -80,11 +80,6 @@ void TcpClient::subscribe(const client_observer_t & observer) {
     _subscibers.push_back(observer);
 }
 
-void TcpClient::unsubscribeAll() {
-    std::lock_guard<std::mutex> lock(_subscribersMtx);
-    _subscibers.clear();
-}
-
 /*
  * Publish incomingPacketHandler client message to observer.
  * Observers get only messages that originated
@@ -93,9 +88,9 @@ void TcpClient::unsubscribeAll() {
  */
 void TcpClient::publishServerMsg(const char * msg, size_t msgSize) {
     std::lock_guard<std::mutex> lock(_subscribersMtx);
-    for (uint i=0; i < _subscibers.size(); i++) {
-        if (_subscibers[i].incomingPacketHandler != NULL) {
-            _subscibers[i].incomingPacketHandler(msg, msgSize);
+    for (const auto &subscriber : _subscibers) {
+        if (subscriber.incomingPacketHandler) {
+            subscriber.incomingPacketHandler(msg, msgSize);
         }
     }
 }
@@ -108,9 +103,9 @@ void TcpClient::publishServerMsg(const char * msg, size_t msgSize) {
  */
 void TcpClient::publishServerDisconnected(const pipe_ret_t & ret) {
     std::lock_guard<std::mutex> lock(_subscribersMtx);
-    for (uint i=0; i < _subscibers.size(); i++) {
-        if (_subscibers[i].disconnectionHandler != NULL) {
-            _subscibers[i].disconnectionHandler(ret);
+    for (const auto &subscriber : _subscibers) {
+        if (subscriber.disconnectionHandler) {
+            subscriber.disconnectionHandler(ret);
         }
     }
 }

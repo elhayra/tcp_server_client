@@ -33,13 +33,15 @@ private:
     std::mutex _subscribersMtx;
     std::mutex _clientsMtx;
 
+    std::thread * _clientsRemoverThread = nullptr;
+    std::atomic<bool> _stopRemoveClientsTask;
 
     void publishClientMsg(const Client & client, const char * msg, size_t msgSize);
     void publishClientDisconnected(const std::string&, const std::string&);
     pipe_ret_t waitForClient(uint timeout);
     void clientEventHandler(const Client&, ClientEvent, const std::string &msg);
-    int findClientIndexByIP(const std::string &ip);
-    bool deleteClient(const std::string &clientIP);
+    void removeDeadClients();
+    void terminateDeadClientsRemover();
     static pipe_ret_t sendToClient(const Client & client, const char * msg, size_t size);
 
 public:
@@ -51,12 +53,9 @@ public:
     void listenToClients(int maxNumOfClients);
     std::string acceptClient(uint timeout);
     void subscribe(const server_observer_t & observer);
-    void unsubscribeAll();
     pipe_ret_t sendToAllClients(const char * msg, size_t size);
     pipe_ret_t sendToClient(const std::string & clientIP, const char * msg, size_t size);
     pipe_ret_t close();
     void printClients();
-    //todo: enable user to get client by id
-
 };
 

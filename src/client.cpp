@@ -1,7 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
 #include <cstring>
-#include <errno.h>
+#include <cerrno>
 #include <unistd.h>
 #include <stdexcept>
 #include <sys/socket.h>
@@ -28,18 +27,18 @@ void Client::startListen() {
     _receiveThread = new std::thread(&Client::receiveTask, this);
 }
 
-void Client::send(const char *msg, size_t size) const {
-    const size_t numBytesSent = ::send(_sockfd.get(), (char *)msg, size, 0);
+void Client::send(const char *msg, size_t msgSize) const {
+    const size_t numBytesSent = ::send(_sockfd.get(), (char *)msg, msgSize, 0);
 
     const bool sendFailed = (numBytesSent < 0);
     if (sendFailed) {
         throw std::runtime_error(strerror(errno));
     }
 
-    const bool notAllBytesWereSent = ((uint)numBytesSent < size);
+    const bool notAllBytesWereSent = (numBytesSent < msgSize);
     if (notAllBytesWereSent) {
         char errorMsg[100];
-        sprintf(errorMsg, "Only %d bytes out of %lu was sent to client", numBytesSent, size);
+        sprintf(errorMsg, "Only %lu bytes out of %lu was sent to client", numBytesSent, msgSize);
         throw std::runtime_error(errorMsg);
     }
 }
@@ -83,7 +82,6 @@ void Client::print() const {
 
 void Client::terminateReceiveThread() {
     setConnected(false);
-
     if (_receiveThread) {
         _receiveThread->join();
         delete _receiveThread;
@@ -96,7 +94,7 @@ void Client::close() {
 
     const bool closeFailed = (::close(_sockfd.get()) == -1);
     if (closeFailed) {
-        throw pipe_ret_t::failure(strerror(errno));
+        throw std::runtime_error(strerror(errno));
     }
 }
 
