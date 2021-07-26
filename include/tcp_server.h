@@ -39,6 +39,8 @@ private:
     pipe_ret_t waitForClient(uint timeout);
     void clientEventHandler(const Client&, ClientEvent, const std::string &msg);
     int findClientIndexByIP(const std::string &ip);
+    bool deleteClient(const std::string &clientIP);
+    static pipe_ret_t sendToClient(const Client & client, const char * msg, size_t size);
 
 public:
     TcpServer();
@@ -48,11 +50,9 @@ public:
     void bindAddress(int port);
     void listenToClients(int maxNumOfClients);
     std::string acceptClient(uint timeout);
-    bool deleteClient(const std::string &clientIP);
     void subscribe(const server_observer_t & observer);
     void unsubscribeAll();
     pipe_ret_t sendToAllClients(const char * msg, size_t size);
-    static pipe_ret_t sendToClient(const Client & client, const char * msg, size_t size);
     pipe_ret_t sendToClient(const std::string & clientIP, const char * msg, size_t size);
     pipe_ret_t close();
     void printClients();

@@ -5,7 +5,6 @@
 //todo: allow running server and client examples together such that it is interactive (maybe use docker-compose?)
 //todo: go over code, improve doc in code and in README
 //todo: option to remove or not remove dead (disconnected) clients
-//todo: d
 
 #define SELECT_FAILED -1
 #define SELECT_TIMEOUT 0
@@ -91,7 +90,7 @@ void TcpServer::publishClientMsg(const Client & client, const char * msg, size_t
     for (const server_observer_t& subscriber : _subscribers) {
         if (subscriber.wantedIP == client.getIp() || subscriber.wantedIP.empty()) {
             if (subscriber.incomingPacketHandler) {
-                subscriber.incomingPacketHandler(client, msg, msgSize);
+                subscriber.incomingPacketHandler(client.getIp(), msg, msgSize);
             }
         }
     }
