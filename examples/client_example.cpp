@@ -5,7 +5,7 @@
 #ifdef CLIENT_EXAMPLE
 
 #include <iostream>
-#include <signal.h>
+#include <csignal>
 #include "../include/tcp_client.h"
 
 TcpClient client;
@@ -43,7 +43,7 @@ void onDisconnection(const pipe_ret_t & ret) {
 void printMenu() {
     std::cout << "select one of the following options: \n" <<
                  "1. send message ('hello server') to server\n" <<
-                 "2. close client\n";
+                 "2. close client and exit\n";
 }
 
 int getMenuSelection() {
@@ -52,7 +52,7 @@ int getMenuSelection() {
    return selection;
 }
 
-void handleMenuSelection(int selection) {
+bool handleMenuSelection(int selection) {
     static const int minSelection = 1;
     static const int maxSelection = 2;
     if (selection < minSelection || selection > maxSelection) {
@@ -76,9 +76,14 @@ void handleMenuSelection(int selection) {
             } else {
                 std::cout << "closed client successfully\n";
             }
-            break;
+            return true;
+        }
+        default: {
+            std::cout << "invalid selection: " << selection <<
+                      ". selection must be b/w " << minSelection << " and " << maxSelection << "\n";
         }
     }
+    return false;
 }
 
 int main() {
@@ -102,12 +107,15 @@ int main() {
 	}
 
 	// send messages to server
-	while(1)
+	bool shouldTerminate = false;
+	while(!shouldTerminate)
 	{
         printMenu();
         int selection = getMenuSelection();
-        handleMenuSelection(selection);
+        shouldTerminate = handleMenuSelection(selection);
 	}
+
+	return 0;
 }
 
 #endif

@@ -5,7 +5,7 @@
 #ifdef SERVER_EXAMPLE
 
 #include <iostream>
-#include <signal.h>
+#include <csignal>
 
 #include "../include/tcp_server.h"
 
@@ -58,42 +58,48 @@ void onClientDisconnected(const std::string &ip, const std::string &msg) {
     std::cout << "Client: " << ip << " disconnected. Reason: " << msg << std::endl;
 }
 
+void acceptClient() { // todo: accept in a loop
+    try {
+        std::cout << "waiting for incoming client...\n";
+        std::string clientIP = server.acceptClient(0);
+        std::cout << "accepted new client with IP: " << clientIP << "\n" <<
+                  "== updated list of accepted clients ==" << "\n";
+        server.printClients();
+    } catch (const std::runtime_error &error) {
+        std::cout << "Accepting client failed: " << error.what() << std::endl;
+    }
+}
 
 void printMenu() {
     std::cout << "\n\nselect one of the following options: \n" <<
-              "1. accept client\n" <<
-              "2. send all clients a message ('hello clients')\n" <<
-              "3. print list of accepted clients\n" <<
-              "4. close server\n";
+              "1. send all clients a message\n" <<
+              "2. print list of accepted clients\n" <<
+              "3. close server and exit\n";
 }
 
 int getMenuSelection() {
     int selection = 0;
     std::cin >> selection;
+    std::cin.ignore (std::numeric_limits<std::streamsize>::max(), '\n');
     return selection;
 }
 
-void handleMenuSelection(int selection) {
+/**
+ * handle menu selection and return true in case program should terminate
+ * after handling selection
+ */
+bool handleMenuSelection(int selection) {
     static const int minSelection = 1;
-    static const int maxSelection = 4;
+    static const int maxSelection = 3;
     if (selection < minSelection || selection > maxSelection) {
         std::cout << "invalid selection: " << selection <<
                   ". selection must be b/w " << minSelection << " and " << maxSelection << "\n";
     }
     switch (selection) {
-        case 1: { // accept client
-            try {
-                std::string clientIP = server.acceptClient(0);
-                std::cout << "\naccepted new client with IP: " << clientIP << "\n" <<
-                          "== updated list of accepted clients ==" << "\n";
-                server.printClients();
-            } catch (const std::runtime_error &error) {
-                std::cout << "Accepting client failed: " << error.what() << std::endl;
-            }
-            break;
-        }
-        case 2: { // send all clients a message
-            const std::string msg = "hello clients";
+        case 1: { // send all clients a message
+            std::string msg;
+            std::cout << "type message to send to all connected clients:\n";
+            getline(std::cin, msg);
             pipe_ret_t sendingResult = server.sendToAllClients(msg.c_str(), msg.size());
             if (sendingResult.isSuccessful()) {
                 std::cout << "sent message to all clients successfully\n";
@@ -102,23 +108,28 @@ void handleMenuSelection(int selection) {
             }
             break;
         }
-        case 3: { // print list of accepted clients
+        case 2: { // print list of accepted clients
             server.printClients();
             break;
         }
-        case 4: { // close server
+        case 3: { // close server
             pipe_ret_t sendingResult = server.close();
             if (sendingResult.isSuccessful()) {
                 std::cout << "closed server successfully\n";
             } else {
                 std::cout << "failed to close server: " << sendingResult.message() << "\n";
             }
-            break;
+            return true;
+        }
+        default: {
+            std::cout << "invalid selection: " << selection <<
+                      ". selection must be b/w " << minSelection << " and " << maxSelection << "\n";
         }
     }
+    return false;
 }
 
-int main(int argc, char *argv[])
+int main()
 {
     // start server on port 65123
     pipe_ret_t startRet = server.start(65123);
@@ -141,12 +152,18 @@ int main(int argc, char *argv[])
     observer2.wantedIP = "10.88.0.11"; // use empty string instead to receive messages from any IP address
     server.subscribe(observer2);
 
-    // receive clients
-    while(1) {
+    // accept a single client. call this function
+    // in a loop to accept multiple clients.
+    acceptClient();
+
+    bool shouldTerminate = false;
+    while(!shouldTerminate) {
         printMenu();
         int selection = getMenuSelection();
-        handleMenuSelection(selection);
+        shouldTerminate = handleMenuSelection(selection);
     }
+
+    return 0;
 }
 
 #endif
