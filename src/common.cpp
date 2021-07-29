@@ -1,18 +1,19 @@
 
 #include <cstdlib>
+#include <cstdint>
 #include "../include/file_descriptor.h"
 #include "../include/common.h"
 
 #define SELECT_FAILED -1
 #define SELECT_TIMEOUT 0
 
-namespace socket_waiter {
+namespace fd_wait {
     /**
      * monitor file descriptor and wait for I/O operation
      */
-    Result waitFor(const FileDescriptor &fileDescriptor, size_t timeoutSeconds) {
+    Result waitFor(const FileDescriptor &fileDescriptor, uint32_t timeoutSeconds) {
         struct timeval tv;
-        tv.tv_sec = 1;
+        tv.tv_sec = timeoutSeconds;
         tv.tv_usec = 0;
         fd_set fds;
 

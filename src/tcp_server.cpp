@@ -8,7 +8,7 @@
 //todo: allow running server and client examples together such that it is interactive (maybe use docker-compose?)
 //todo: go over code, improve doc in code and in README
 //todo: option to remove or not remove dead (disconnected) clients
-
+//todo: document: this is just a simple tcp server-client example code. it is optimized for simplicity and ease of use/read but not optimised for performance (e.g. open new thread for each publish call) however, I believe tuning this code to suite your needs should be easy in most cases.
 
 
 TcpServer::TcpServer() {
@@ -67,6 +67,10 @@ void TcpServer::terminateDeadClientsRemover() {
         _clientsRemoverThread = nullptr;
     }
 }
+
+//TODO: open new thread for each publish event handling? or just disconnection? - doing this for incoming msg is too much.
+//todo: maybe use same thread for all publishing tasks with condition_lock?
+//todo: currently publishing from the current thread creates deadlocks if the user uses other server functions in the subscribers callbacks
 
 void TcpServer::clientEventHandler(const Client &client, ClientEvent event, const std::string &msg) {
     switch (event) {
@@ -200,14 +204,14 @@ std::string TcpServer::acceptClient(uint timeout) {
     return newClient->getIp();
 }
 
-pipe_ret_t TcpServer::waitForClient(uint timeout) {
+pipe_ret_t TcpServer::waitForClient(uint32_t timeout) {
     if (timeout > 0) {
-        const socket_waiter::Result waitResult = socket_waiter::waitFor(_sockfd);
+        const fd_wait::Result waitResult = fd_wait::waitFor(_sockfd, timeout);
         const bool noIncomingClient = (!FD_ISSET(_sockfd.get(), &_fds));
 
-        if (waitResult == socket_waiter::Result::FAILURE) {
+        if (waitResult == fd_wait::Result::FAILURE) {
             return pipe_ret_t::failure(strerror(errno));
-        } else if (waitResult == socket_waiter::Result::TIMEOUT) {
+        } else if (waitResult == fd_wait::Result::TIMEOUT) {
             return pipe_ret_t::failure("Timeout waiting for client");
         } else if (noIncomingClient) {
             return pipe_ret_t::failure("File descriptor is not set");

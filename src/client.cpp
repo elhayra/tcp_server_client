@@ -48,11 +48,11 @@ void Client::send(const char *msg, size_t msgSize) const {
  */
 void Client::receiveTask() {
     while(isConnected()) {
-        const socket_waiter::Result waitResult = socket_waiter::waitFor(_sockfd);
+        const fd_wait::Result waitResult = fd_wait::waitFor(_sockfd);
 
-        if (waitResult == socket_waiter::Result::FAILURE) {
+        if (waitResult == fd_wait::Result::FAILURE) {
             throw std::runtime_error(strerror(errno));
-        } else if (waitResult == socket_waiter::Result::TIMEOUT) {
+        } else if (waitResult == fd_wait::Result::TIMEOUT) {
             continue;
         }
 

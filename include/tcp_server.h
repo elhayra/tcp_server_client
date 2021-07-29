@@ -38,7 +38,7 @@ private:
 
     void publishClientMsg(const Client & client, const char * msg, size_t msgSize);
     void publishClientDisconnected(const std::string&, const std::string&);
-    pipe_ret_t waitForClient(uint timeout);
+    pipe_ret_t waitForClient(uint32_t timeout);
     void clientEventHandler(const Client&, ClientEvent, const std::string &msg);
     void removeDeadClients();
     void terminateDeadClientsRemover();

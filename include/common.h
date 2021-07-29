@@ -4,14 +4,14 @@
 
 #define MAX_PACKET_SIZE 4096
 
-namespace socket_waiter {
+namespace fd_wait {
     enum Result {
         FAILURE,
         TIMEOUT,
         SUCCESS
     };
 
-    Result waitFor(const FileDescriptor &fileDescriptor, size_t timeoutSeconds = 1);
+    Result waitFor(const FileDescriptor &fileDescriptor, uint32_t timeoutSeconds = 1);
 };
 
 

@@ -9,8 +9,6 @@
 
 #include "../include/tcp_server.h"
 
-//todo: bug: closing server when client is connected, close server nicely, but tcp_client code crahses
-//todo: bug: closing client with exception / killing it, cause server dead lock when trying to remove dead client
 //todo: document 'removing dead client' message, when closing tcp_client_example
 
 // declare the server
@@ -31,7 +29,7 @@ void onIncomingMsg1(const std::string &clientIP, const char * msg, size_t size) 
     // else just print the client message
     if (msgStr.find("quit") != std::string::npos) {
         std::cout << "Closing server..." << std::endl;
-        pipe_ret_t finishRet = server.close();
+        pipe_ret_t finishRet = server.close(); //TODO: is calling close here allowed?
         if (finishRet.isSuccessful()) {
             std::cout << "Server closed." << std::endl;
         } else {

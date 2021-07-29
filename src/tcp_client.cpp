@@ -70,7 +70,7 @@ pipe_ret_t TcpClient::sendMsg(const char * msg, size_t size) {
     if (numBytesSent < 0 ) { // send failed
         return pipe_ret_t::failure(strerror(errno));
     }
-    if ((uint)numBytesSent < size) { // not all bytes were sent
+    if (numBytesSent < size) { // not all bytes were sent
         char errorMsg[100];
         sprintf(errorMsg, "Only %lu bytes out of %lu was sent to client", numBytesSent, size);
         return pipe_ret_t::failure(errorMsg);
@@ -118,11 +118,11 @@ void TcpClient::publishServerDisconnected(const pipe_ret_t & ret) {
  */
 void TcpClient::receiveTask() {
     while(_isConnected) {
-        const socket_waiter::Result waitResult = socket_waiter::waitFor(_sockfd);
+        const fd_wait::Result waitResult = fd_wait::waitFor(_sockfd);
 
-        if (waitResult == socket_waiter::Result::FAILURE) {
+        if (waitResult == fd_wait::Result::FAILURE) {
             throw std::runtime_error(strerror(errno));
-        } else if (waitResult == socket_waiter::Result::TIMEOUT) {
+        } else if (waitResult == fd_wait::Result::TIMEOUT) {
             continue;
         }
 
