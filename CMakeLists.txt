@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.8.1)
 project(tcp_client_server)
 
 find_package (Threads)

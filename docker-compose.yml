@@ -1,0 +1,11 @@
+
+services:
+
+  tcp-server:
+    image: ${ECR_URL}/pikaia-eventor:${IMAGE_TAG}
+    command: sh -c "./wait && npm start"
+    ports:
+      - 5000:8000
+    depends_on:
+      - documents-db
+      - message-broker
