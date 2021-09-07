@@ -17,8 +17,8 @@
 //todo: document: how to compile the code, how to run multiple clients
 //todo: document: thread safety
 //todo: document: how you can customise this for your needs
-//todo: add compilation bash script
 //todo: for each function, go over it and check what if it is called from more than one thread at the same time?
+//todo: document: don't call server functions from the same callback function - this might create a deadlock
 
 TcpServer::TcpServer() {
     _subscribers.reserve(10);

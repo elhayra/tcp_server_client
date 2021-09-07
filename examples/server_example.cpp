@@ -23,23 +23,6 @@ void onIncomingMsg1(const std::string &clientIP, const char * msg, size_t size) 
     std::string msgStr = msg;
     // print the message content
     std::cout << "Observer1 got client msg: " << msgStr << std::endl;
-    // if client sent the string "quit", close server
-    // else if client sent "print" print the server clients
-    // else just print the client message
-    if (msgStr.find("quit") != std::string::npos) {
-        std::cout << "Closing server..." << std::endl;
-        pipe_ret_t finishRet = server.close(); //TODO: is calling close here allowed?
-        if (finishRet.isSuccessful()) {
-            std::cout << "Server closed." << std::endl;
-        } else {
-            std::cout << "Failed closing server: " << finishRet.message() << std::endl;
-        }
-    } else if (msgStr.find("print") != std::string::npos){
-        server.printClients();
-    } else {
-        std::string replyMsg = "server got this msg: "+ msgStr;
-        server.sendToAllClients(replyMsg.c_str(), replyMsg.length());
-    }
 }
 
 // observer callback. will be called for every new message received by clients
@@ -59,7 +42,10 @@ void onClientDisconnected(const std::string &ip, const std::string &msg) {
     std::cout << "Client: " << ip << " disconnected. Reason: " << msg << std::endl;
 }
 
-void acceptClient() { // todo: accept in a loop
+// accept a single client.
+// if you wish to accept multiple clients, call this function in a loop
+// (you might want to use a thread to accept clients without blocking)
+void acceptClient() {
     try {
         std::cout << "waiting for incoming client...\n";
         std::string clientIP = server.acceptClient(0);
@@ -117,7 +103,16 @@ bool handleMenuSelection(int selection) {
             server.printClients();
             break;
         }
-        case 3: { // close server
+        case 3: { // send message to a client
+            std::cout << "enter client IP:\n";
+            std::string clientIP;
+            std::cin >> clientIP;
+            std::cout << "enter message to send:\n";
+            std::string message;
+            std::cin >> message;
+            server.sendToClient(clientIP, message.c_str(), message.size());
+        };
+        case 4: { // close server
             pipe_ret_t sendingResult = server.close();
             if (sendingResult.isSuccessful()) {
                 std::cout << "closed server successfully\n";
@@ -157,9 +152,7 @@ int main()
     observer2.wantedIP = "10.88.0.11"; // use empty string instead to receive messages from any IP address
     server.subscribe(observer2);
 
-    // accept a single client. call this function
-    // in a loop to accept multiple clients.
-    acceptClient(); //TODO: accept clients in a loop in the background
+    acceptClient();
 
     bool shouldTerminate = false;
     while(!shouldTerminate) {
