@@ -1,8 +1,12 @@
-
-#include <cstdlib>
 #include <cstdint>
 #include "../include/file_descriptor.h"
 #include "../include/common.h"
+
+#if __linux__
+    #include <cstdlib>
+#elif __APPLE__
+    #include <sys/select.h>
+#endif
 
 #define SELECT_FAILED -1
 #define SELECT_TIMEOUT 0
