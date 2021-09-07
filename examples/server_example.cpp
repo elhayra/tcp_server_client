@@ -21,7 +21,7 @@ server_observer_t observer1, observer2;
 // with the requested IP address
 void onIncomingMsg1(const std::string &clientIP, const char * msg, size_t size) {
     std::string msgStr = msg;
-    // print the message content
+    // print client message
     std::cout << "Observer1 got client msg: " << msgStr << std::endl;
 }
 
@@ -31,10 +31,6 @@ void onIncomingMsg2(const std::string &clientIP, const char * msg, size_t size) 
     std::string msgStr = msg;
     // print client message
     std::cout << "Observer2 got client msg: " << msgStr << std::endl;
-
-    // reply back to client
-    std::string replyMsg = "server got this msg: "+ msgStr;
-    server.sendToClient(clientIP, msg, size);
 }
 
 // observer callback. will be called when client disconnects
@@ -80,7 +76,7 @@ int getMenuSelection() {
  */
 bool handleMenuSelection(int selection) {
     static const int minSelection = 1;
-    static const int maxSelection = 3;
+    static const int maxSelection = 5;
     if (selection < minSelection || selection > maxSelection) {
         std::cout << "invalid selection: " << selection <<
                   ". selection must be b/w " << minSelection << " and " << maxSelection << "\n";
@@ -103,16 +99,33 @@ bool handleMenuSelection(int selection) {
             server.printClients();
             break;
         }
-        case 3: { // send message to a client
+        case 3: { // send message to a specific client
             std::cout << "enter client IP:\n";
             std::string clientIP;
             std::cin >> clientIP;
             std::cout << "enter message to send:\n";
             std::string message;
             std::cin >> message;
-            server.sendToClient(clientIP, message.c_str(), message.size());
+            pipe_ret_t result = server.sendToClient(clientIP, message.c_str(), message.size());
+            if (!result.isSuccessful()) {
+                std::cout << "sending failed: " << result.message() << "\n";
+            } else {
+                std::cout << "sending succeeded\n";
+            }
+            break;
         };
-        case 4: { // close server
+        case 4: { // send message to all clients
+            std::string message;
+            std::cin >> message;
+            pipe_ret_t result = server.sendToAllClients(message.c_str(), message.size());
+            if (!result.isSuccessful()) {
+                std::cout << "sending failed: " << result.message() << "\n";
+            } else {
+                std::cout << "sending succeeded\n";
+            }
+            break;
+        }
+        case 5: { // close server
             pipe_ret_t sendingResult = server.close();
             if (sendingResult.isSuccessful()) {
                 std::cout << "closed server successfully\n";

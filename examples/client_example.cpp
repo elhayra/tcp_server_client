@@ -25,13 +25,8 @@ void sig_exit(int s)
 
 // observer callback. will be called for every new message received by the server
 void onIncomingMsg(const char * msg, size_t size) {
-	std::cout << "Got msg from server (echo): " << msg << std::endl;
+	std::cout << "Got msg from server: " << msg << std::endl;
 }
-
-//todo: DOCUMENT: never call tcp_client or tcp_server functions in their subscribers CB functions,
-// todo: this may cause dead lock (e.g. don't call client.close()) in this function. (client will be closed automatically in such case)
-// todo: the CB functions should be called quickly and return, because they are called in
-// todo: the context of the tcp_client / server-client
 
 // observer callback. will be called when server disconnects
 void onDisconnection(const pipe_ret_t & ret) {

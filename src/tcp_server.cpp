@@ -20,6 +20,12 @@
 //todo: for each function, go over it and check what if it is called from more than one thread at the same time?
 //todo: document: don't call server functions from the same callback function - this might create a deadlock
 
+
+//todo: DOCUMENT: never call tcp_client or tcp_server functions in their subscribers CB functions,
+// todo: this may cause dead lock (e.g. don't call client.close()) in this function. (client will be closed automatically in such case)
+// todo: the CB functions should be called quickly and return, because they are called in
+// todo: the context of the tcp_client / server-client
+
 TcpServer::TcpServer() {
     _subscribers.reserve(10);
     _clients.reserve(10);
