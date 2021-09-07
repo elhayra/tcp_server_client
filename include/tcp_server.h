@@ -47,7 +47,7 @@ private:
 public:
     TcpServer();
     ~TcpServer();
-    pipe_ret_t start(int port, int maxNumOfClients = 5);
+    pipe_ret_t start(int port, int maxNumOfClients = 5, bool removeDeadClientsAutomatically = true);
     void initializeSocket();
     void bindAddress(int port);
     void listenToClients(int maxNumOfClients);

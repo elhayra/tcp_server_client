@@ -9,7 +9,6 @@
 
 #include "../include/tcp_server.h"
 
-//todo: document 'removing dead client' message, when closing tcp_client_example
 
 // declare the server
 TcpServer server;

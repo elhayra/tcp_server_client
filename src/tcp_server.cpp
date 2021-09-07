@@ -7,9 +7,18 @@
 
 //todo: allow running server and client examples together such that it is interactive (maybe use docker-compose?)
 //todo: go over code, improve doc in code and in README
-//todo: option to remove or not remove dead (disconnected) clients
 //todo: document: this is just a simple tcp server-client example code. it is optimized for simplicity and ease of use/read but not optimised for performance (e.g. open new thread for each publish call) however, I believe tuning this code to suite your needs should be easy in most cases.
+//todo: document 'removing dead client' message, when closing tcp_client_example
 
+//todo: fix closing server (and also check closing client) - there is a deadlock when running the example
+//todo: document: 'connection refused' - make sure server is running
+//todo: document: play with code - close server while clients are alive, and watch how they receive notification about the server closing
+//todo: document: how to play with the examples
+//todo: document: how to compile the code, how to run multiple clients
+//todo: document: thread safety
+//todo: document: how you can customise this for your needs
+//todo: add compilation bash script
+//todo: for each function, go over it and check what if it is called from more than one thread at the same time?
 
 TcpServer::TcpServer() {
     _subscribers.reserve(10);
@@ -125,9 +134,11 @@ void TcpServer::publishClientDisconnected(const std::string &clientIP, const std
  * Bind port and start listening
  * Return tcp_ret_t
  */
-pipe_ret_t TcpServer::start(int port, int maxNumOfClients) {
-    try {
+pipe_ret_t TcpServer::start(int port, int maxNumOfClients, bool removeDeadClientsAutomatically) {
+    if (removeDeadClientsAutomatically) {
         _clientsRemoverThread = new std::thread(&TcpServer::removeDeadClients, this);
+    }
+    try {
         initializeSocket();
         bindAddress(port);
         listenToClients(maxNumOfClients);
