@@ -22,7 +22,7 @@ server_observer_t observer1, observer2;
 void onIncomingMsg1(const std::string &clientIP, const char * msg, size_t size) {
     std::string msgStr = msg;
     // print client message
-    std::cout << "Observer1 got client msg: " << msgStr << std::endl;
+    std::cout << "Observer1 got client msg: " << msgStr << "\n";
 }
 
 // observer callback. will be called for every new message received by clients
@@ -30,12 +30,12 @@ void onIncomingMsg1(const std::string &clientIP, const char * msg, size_t size) 
 void onIncomingMsg2(const std::string &clientIP, const char * msg, size_t size) {
     std::string msgStr = msg;
     // print client message
-    std::cout << "Observer2 got client msg: " << msgStr << std::endl;
+    std::cout << "Observer2 got client msg: " << msgStr << "\n";
 }
 
 // observer callback. will be called when client disconnects
 void onClientDisconnected(const std::string &ip, const std::string &msg) {
-    std::cout << "Client: " << ip << " disconnected. Reason: " << msg << std::endl;
+    std::cout << "Client: " << ip << " disconnected. Reason: " << msg << "\n";
 }
 
 // accept a single client.
@@ -49,7 +49,7 @@ void acceptClient() {
                   "== updated list of accepted clients ==" << "\n";
         server.printClients();
     } catch (const std::runtime_error &error) {
-        std::cout << "Accepting client failed: " << error.what() << std::endl;
+        std::cout << "Accepting client failed: " << error.what() << "\n";
     }
 }
 
@@ -57,7 +57,9 @@ void printMenu() {
     std::cout << "\n\nselect one of the following options: \n" <<
               "1. send all clients a message\n" <<
               "2. print list of accepted clients\n" <<
-              "3. close server and exit\n";
+              "3. send message to a specific client\n" <<
+              "4. send message to all clients\n" <<
+              "5. close server and exit\n";
 }
 
 int getMenuSelection() {
@@ -115,6 +117,7 @@ bool handleMenuSelection(int selection) {
             break;
         };
         case 4: { // send message to all clients
+            std::cout << "enter message to send:\n";
             std::string message;
             std::cin >> message;
             pipe_ret_t result = server.sendToAllClients(message.c_str(), message.size());
@@ -147,9 +150,9 @@ int main()
     // start server on port 65123
     pipe_ret_t startRet = server.start(65123);
     if (startRet.isSuccessful()) {
-        std::cout << "Server setup succeeded" << std::endl;
+        std::cout << "Server setup succeeded\n";
     } else {
-        std::cout << "Server setup failed: " << startRet.message() << std::endl;
+        std::cout << "Server setup failed: " << startRet.message() << "\n";
         return EXIT_FAILURE;
     }
 

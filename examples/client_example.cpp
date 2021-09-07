@@ -13,29 +13,29 @@ TcpClient client;
 // on sig_exit, close client
 void sig_exit(int s)
 {
-	std::cout << "Closing client..." << std::endl;
+	std::cout << "Closing client...\n";
 	pipe_ret_t finishRet = client.close();
 	if (finishRet.isSuccessful()) {
-		std::cout << "Client closed." << std::endl;
+		std::cout << "Client closed.\n";
 	} else {
-		std::cout << "Failed to close client." << std::endl;
+		std::cout << "Failed to close client.\n";
 	}
 	exit(0);
 }
 
 // observer callback. will be called for every new message received by the server
 void onIncomingMsg(const char * msg, size_t size) {
-	std::cout << "Got msg from server: " << msg << std::endl;
+	std::cout << "Got msg from server: " << msg << "\n";
 }
 
 // observer callback. will be called when server disconnects
 void onDisconnection(const pipe_ret_t & ret) {
-	std::cout << "Server disconnected: " << ret.message() << std::endl;
+	std::cout << "Server disconnected: " << ret.message() << "\n";
 }
 
 void printMenu() {
     std::cout << "select one of the following options: \n" <<
-                 "1. send message ('hello server') to server\n" <<
+                 "1. send message to server\n" <<
                  "2. close client and exit\n";
 }
 
@@ -59,11 +59,14 @@ bool handleMenuSelection(int selection) {
     }
     switch (selection) {
         case 1: { // send message to server
-            std::string msg = "hello server\n";
-            pipe_ret_t sendRet = client.sendMsg(msg.c_str(), msg.size());
+            std::cout << "enter message to send:\n";
+            std::string message;
+            std::cin >> message;
+            pipe_ret_t sendRet = client.sendMsg(message.c_str(), message.size());
             if (!sendRet.isSuccessful()) {
-                std::cout << "Failed to send msg: " << sendRet.message() << std::endl;
-                break;
+                std::cout << "Failed to send message: " << sendRet.message() << "\n";
+            } else {
+                std::cout << "message was sent successfuly\n";
             }
             break;
         }
@@ -98,9 +101,9 @@ int main() {
 	// connect client to an open server
     pipe_ret_t connectRet = client.connectTo("127.0.0.1", 65123);
 	if (connectRet.isSuccessful()) {
-		std::cout << "Client connected successfully" << std::endl;
+		std::cout << "Client connected successfully\n";
 	} else {
-		std::cout << "Client failed to connect: " << connectRet.message() << std::endl;
+		std::cout << "Client failed to connect: " << connectRet.message() << "\n";
 		return EXIT_FAILURE;
 	}
 
