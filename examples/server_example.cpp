@@ -58,8 +58,7 @@ void printMenu() {
               "1. send all clients a message\n" <<
               "2. print list of accepted clients\n" <<
               "3. send message to a specific client\n" <<
-              "4. send message to all clients\n" <<
-              "5. close server and exit\n";
+              "4. close server and exit\n";
 }
 
 int getMenuSelection() {
@@ -78,7 +77,7 @@ int getMenuSelection() {
  */
 bool handleMenuSelection(int selection) {
     static const int minSelection = 1;
-    static const int maxSelection = 5;
+    static const int maxSelection = 4;
     if (selection < minSelection || selection > maxSelection) {
         std::cout << "invalid selection: " << selection <<
                   ". selection must be b/w " << minSelection << " and " << maxSelection << "\n";
@@ -116,19 +115,7 @@ bool handleMenuSelection(int selection) {
             }
             break;
         };
-        case 4: { // send message to all clients
-            std::cout << "enter message to send:\n";
-            std::string message;
-            std::cin >> message;
-            pipe_ret_t result = server.sendToAllClients(message.c_str(), message.size());
-            if (!result.isSuccessful()) {
-                std::cout << "sending failed: " << result.message() << "\n";
-            } else {
-                std::cout << "sending succeeded\n";
-            }
-            break;
-        }
-        case 5: { // close server
+        case 4: { // close server
             pipe_ret_t sendingResult = server.close();
             if (sendingResult.isSuccessful()) {
                 std::cout << "closed server successfully\n";
@@ -164,7 +151,7 @@ int main()
 
     // configure and register observer2
     observer2.incomingPacketHandler = onIncomingMsg2;
-    observer2.disconnectionHandler = nullptr; // nullptr or not setting this means we don't care about disconnection
+    observer2.disconnectionHandler = nullptr; // nullptr or not setting this means we don't care about disconnection event
     observer2.wantedIP = "10.88.0.11"; // use empty string instead to receive messages from any IP address
     server.subscribe(observer2);
 

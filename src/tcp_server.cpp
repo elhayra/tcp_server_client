@@ -6,30 +6,9 @@
 #include "../include/common.h"
 
 //todo: CONTINUE HERE: created Dockerfile and tested it successfully, not run it and edit docker-compose.yml to run 3 clients and one server
-//todo: allow running server and client examples together such that it is interactive (maybe use docker-compose?)
-//todo: go over code, improve doc in code and in README
-//todo: document: this is just a simple tcp server-client example code. it is optimized for simplicity and ease of use/read but not optimised for performance (e.g. open new thread for each publish call) however, I believe tuning this code to suite your needs should be easy in most cases.
-//todo: document 'removing dead client' message, when closing tcp_client_example
-
-//todo: fix closing server (and also check closing client) - there is a deadlock when running the example
-//todo: document: 'connection refused' - make sure server is running
-//todo: document: play with code - close server while clients are alive, and watch how they receive notification about the server closing
-//todo: document: how to play with the examples
-//todo: document: how to compile the code, how to run multiple clients
-//todo: document: thread safety
-//todo: document: how you can customise this for your needs
-//todo: for each function, go over it and check what if it is called from more than one thread at the same time?
-//todo: document: don't call server functions from the same callback function - this might create a deadlock
 
 
-//todo: DOCUMENT: never call tcp_client or tcp_server functions in their subscribers CB functions,
-// todo: this may cause dead lock (e.g. don't call client.close()) in this function. (client will be closed automatically in such case)
-// todo: the CB functions should be called quickly and return, because they are called in
-// todo: the context of the tcp_client / server-client
-
-//TODO: open new thread for each publish event handling? or just disconnection? - doing this for incoming msg is too much.
-//todo: maybe use same thread for all publishing tasks with condition_lock?
-//todo: currently publishing from the current thread creates deadlocks if the user uses other server functions in the subscribers callbacks
+//todo: write tests?
 
 //todo: make sure no 'todos' are left
 
@@ -71,7 +50,6 @@ void TcpServer::removeDeadClients() {
                                                [](Client *client) { return !client->isConnected(); });
 
             if (clientToRemove != _clients.end()) {
-                std::cout << "removing dead client " << (*clientToRemove)->getIp() << std::endl; //TODO: REMOVE
                 (*clientToRemove)->close();
                 delete *clientToRemove;
                 _clients.erase(clientToRemove);
@@ -91,7 +69,10 @@ void TcpServer::terminateDeadClientsRemover() {
     }
 }
 
-
+/**
+ * Handle different client events. Subscriber callbacks should be short and fast, and must not
+ * call other server functions to avoid deadlock
+ */
 void TcpServer::clientEventHandler(const Client &client, ClientEvent event, const std::string &msg) {
     switch (event) {
         case ClientEvent::DISCONNECTED: {
