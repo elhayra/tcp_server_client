@@ -5,13 +5,6 @@
 #include "../include/tcp_server.h"
 #include "../include/common.h"
 
-//todo: CONTINUE HERE: created Dockerfile and tested it successfully, not run it and edit docker-compose.yml to run 3 clients and one server
-
-
-//todo: write tests?
-
-//todo: make sure no 'todos' are left
-
 
 TcpServer::TcpServer() {
     _subscribers.reserve(10);
@@ -223,10 +216,6 @@ pipe_ret_t TcpServer::waitForClient(uint32_t timeout) {
 
     return pipe_ret_t::success();
 }
-
-
-//todo: loop once a second and remove dead clients
-// todo: make sure client is closed and remove it from clients vector (use delete client function here)
 
 /*
  * Send message to all connected clients.

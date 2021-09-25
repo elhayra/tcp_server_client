@@ -19,9 +19,9 @@ $ ./build
 ```
 
 run the server and client examples:
-Navigate into the `build` or `cmake-build` folder and run in the terminal:
+Navigate into the `build` folder and run in the terminal:
 ```bash
-$ cd cmake-build
+$ cd build
 ```
 In terminal #1:
 ```bash
@@ -54,7 +54,7 @@ The build process generate three files: `libtcp_client_server.a`, `tcp_client` a
 The last two are the executables of the examples which can be executed in the terminal. 
 
 
-#### Building only server or client
+#### Building Only Server or Client
 
 By default, the CMake configuration builds both server and client. However, you can use flags to build only one of the apps as follows:
 
@@ -77,8 +77,7 @@ cmake -DCLIENT_EXAMPLE=OFF ..
 And then run the make command as usual.
 
 ## Run the Examples 
-The server example should be executed first, since the client in the example will try to connect to the server right after the client example is executed.
-Navigate into the `build` or `cmake-build` folder and run in the terminal:
+Navigate into the `build` folder and run in the terminal:
 ```bash
 $ ./tcp_server
 ```
@@ -102,8 +101,3 @@ Both server and client are using the observer design pattern to register and han
 When registering to an event with a callback, you should make sure that:
 - The callback is fast (not doing any heavy lifting tasks) because those callbacks are called from the context of the server or client. 
 - No server / client function calls are made in those callbacks to avoid possible deadlock.
-
-## Issues
-| Issue | Solution |
-| :---: | :---: |
-| Client emit 'connection refused' when trying to connect to the server | Make sure the server is running |

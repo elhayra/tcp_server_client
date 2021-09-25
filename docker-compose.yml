@@ -1,11 +1,14 @@
 
 services:
-
   tcp-server:
-    image: ${ECR_URL}/pikaia-eventor:${IMAGE_TAG}
-    command: sh -c "./wait && npm start"
-    ports:
-      - 5000:8000
-    depends_on:
-      - documents-db
-      - message-broker
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "cd build && ./tcp_server"
+
+  tcp-client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "cd build && ./tcp_client"
+
