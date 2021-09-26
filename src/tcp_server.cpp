@@ -37,17 +37,19 @@ void TcpServer::printClients() {
 void TcpServer::removeDeadClients() {
     std::vector<Client*>::const_iterator clientToRemove;
     while (!_stopRemoveClientsTask) {
+        {
+            std::lock_guard<std::mutex> lock(_clientsMtx);
+            do {
+                clientToRemove = std::find_if(_clients.begin(), _clients.end(),
+                                              [](Client *client) { return !client->isConnected(); });
 
-        do {
-            clientToRemove = std::find_if(_clients.begin(), _clients.end(),
-                                               [](Client *client) { return !client->isConnected(); });
-
-            if (clientToRemove != _clients.end()) {
-                (*clientToRemove)->close();
-                delete *clientToRemove;
-                _clients.erase(clientToRemove);
-            }
-        } while (clientToRemove != _clients.end());
+                if (clientToRemove != _clients.end()) {
+                    (*clientToRemove)->close();
+                    delete *clientToRemove;
+                    _clients.erase(clientToRemove);
+                }
+            } while (clientToRemove != _clients.end());
+        }
 
         sleep(2);
     }
