@@ -41,7 +41,7 @@ void TcpClient::initializeSocket() {
 
     _sockfd.set(socket(AF_INET , SOCK_STREAM , 0));
     const bool socketFailed = (_sockfd.get() == -1);
-    if (socketFailed) { //socket failed
+    if (socketFailed) {
         throw std::runtime_error(strerror(errno));
     }
 }
