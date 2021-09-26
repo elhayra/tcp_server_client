@@ -1,3 +1,5 @@
+![cmake workflow](https://github.com/elhayra/tcp_server_client/actions/workflows/cmake.yml/badge.svg)
+
 # TCP server client
 A thin and simple C++ TCP client and server library with examples.
 
