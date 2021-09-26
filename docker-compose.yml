@@ -1,0 +1,14 @@
+
+services:
+  tcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "cd build && ./tcp_server"
+
+  tcp-client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "cd build && ./tcp_client"
+

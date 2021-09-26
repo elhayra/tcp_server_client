@@ -1,9 +1,4 @@
-
-
-#ifndef INTERCOM_TCP_SERVER_H
-#define INTERCOM_TCP_SERVER_H
-
-
+#pragma once
 
 #include <vector>
 #include <stdio.h>
@@ -18,43 +13,49 @@
 #include <cstring>
 #include <errno.h>
 #include <iostream>
+#include <mutex>
 #include "client.h"
 #include "server_observer.h"
 #include "pipe_ret_t.h"
+#include "file_descriptor.h"
 
+class TcpServer {
 
-#define MAX_PACKET_SIZE 4096
-
-class TcpServer
-{
 private:
 
-    int m_sockfd;
-    struct sockaddr_in m_serverAddress;
-    struct sockaddr_in m_clientAddress;
-    fd_set m_fds;
-    std::vector<Client> m_clients;
-    std::vector<server_observer_t> m_subscibers;
-    std::thread * threadHandle;
+    FileDescriptor _sockfd;
+    struct sockaddr_in _serverAddress;
+    struct sockaddr_in _clientAddress;
+    fd_set _fds;
+    std::vector<Client*> _clients;
+    std::vector<server_observer_t> _subscribers;
+
+    std::mutex _subscribersMtx;
+    std::mutex _clientsMtx;
+
+    std::thread * _clientsRemoverThread = nullptr;
+    std::atomic<bool> _stopRemoveClientsTask;
 
     void publishClientMsg(const Client & client, const char * msg, size_t msgSize);
-    void publishClientDisconnected(const Client & client);
-    void receiveTask(/*void * context*/);
-
+    void publishClientDisconnected(const std::string&, const std::string&);
+    pipe_ret_t waitForClient(uint32_t timeout);
+    void clientEventHandler(const Client&, ClientEvent, const std::string &msg);
+    void removeDeadClients();
+    void terminateDeadClientsRemover();
+    static pipe_ret_t sendToClient(const Client & client, const char * msg, size_t size);
 
 public:
-
-    pipe_ret_t start(int port);
-    Client acceptClient(uint timeout);
-    bool deleteClient(Client & client);
+    TcpServer();
+    ~TcpServer();
+    pipe_ret_t start(int port, int maxNumOfClients = 5, bool removeDeadClientsAutomatically = true);
+    void initializeSocket();
+    void bindAddress(int port);
+    void listenToClients(int maxNumOfClients);
+    std::string acceptClient(uint timeout);
     void subscribe(const server_observer_t & observer);
-    void unsubscribeAll();
     pipe_ret_t sendToAllClients(const char * msg, size_t size);
-    pipe_ret_t sendToClient(const Client & client, const char * msg, size_t size);
-    pipe_ret_t finish();
+    pipe_ret_t sendToClient(const std::string & clientIP, const char * msg, size_t size);
+    pipe_ret_t close();
     void printClients();
 };
 
-
-
-#endif //INTERCOM_TCP_SERVER_H

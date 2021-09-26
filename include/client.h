@@ -1,42 +1,55 @@
-
-#ifndef INTERCOM_CLIENT_H
-#define INTERCOM_CLIENT_H
-
+#pragma once
 
 #include <string>
 #include <thread>
 #include <functional>
+#include <mutex>
+#include <atomic>
+
+#include "pipe_ret_t.h"
+#include "client_event.h"
+#include "file_descriptor.h"
+
 
 class Client {
 
+    using client_event_handler_t = std::function<void(const Client&, ClientEvent, const std::string&)>;
+
 private:
-    int m_sockfd = 0;
-    std::string m_ip = "";
-    std::string m_errorMsg = "";
-    bool m_isConnected;
-    std::thread * m_threadHandler = nullptr;
+    FileDescriptor _sockfd;
+    std::string _ip = "";
+    std::atomic<bool> _isConnected;
+    std::thread * _receiveThread = nullptr;
+    client_event_handler_t _eventHandlerCallback;
+
+    void setConnected(bool flag) { _isConnected = flag; }
+
+    void receiveTask();
+
+    void terminateReceiveThread();
 
 public:
-    ~Client();
-    bool operator ==(const Client & other);
+    Client(int);
 
-    void setFileDescriptor(int sockfd) { m_sockfd = sockfd; }
-    int getFileDescriptor() const { return m_sockfd; }
+    bool operator ==(const Client & other) const ;
 
-    void setIp(const std::string & ip) { m_ip = ip; }
-    std::string getIp() const { return m_ip; }
+    void setIp(const std::string & ip) { _ip = ip; }
+    std::string getIp() const { return _ip; }
 
-    void setErrorMessage(const std::string & msg) { m_errorMsg = msg; }
-    std::string getInfoMessage() const { return m_errorMsg; }
+    void setEventsHandler(const client_event_handler_t & eventHandler) { _eventHandlerCallback = eventHandler; }
+    void publishEvent(ClientEvent clientEvent, const std::string &msg = "");
 
-    void setConnected() { m_isConnected = true; }
 
-    void setDisconnected() { m_isConnected = false; }
-    bool isConnected() { return m_isConnected; }
+    bool isConnected() const { return _isConnected; }
 
-    void setThreadHandler(std::function<void(void)> func) { m_threadHandler = new std::thread(func);}
+    void startListen();
+
+    void send(const char * msg, size_t msgSize) const;
+
+    void close();
+
+    void print() const;
 
 };
 
 
-#endif //INTERCOM_CLIENT_H
