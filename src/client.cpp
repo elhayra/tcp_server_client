@@ -71,6 +71,7 @@ void Client::receiveTask() {
             publishEvent(ClientEvent::DISCONNECTED, disconnectionMessage);
             return;
         } else {
+            receivedMessage[numOfBytesReceived] = '\0';
             publishEvent(ClientEvent::INCOMING_MSG, receivedMessage);
         }
     }
