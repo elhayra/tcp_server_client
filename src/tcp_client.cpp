@@ -127,6 +127,7 @@ void TcpClient::receiveTask() {
         }
 
         char msg[MAX_PACKET_SIZE];
+        memset(msg, '\0', sizeof(msg)); 
         const size_t numOfBytesReceived = recv(_sockfd.get(), msg, MAX_PACKET_SIZE, 0);
 
         if(numOfBytesReceived < 1) {
