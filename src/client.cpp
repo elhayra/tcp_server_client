@@ -71,7 +71,7 @@ void Client::receiveTask() {
             publishEvent(ClientEvent::DISCONNECTED, disconnectionMessage);
             return;
         } else {
-            publishEvent(ClientEvent::INCOMING_MSG, receivedMessage);
+            publishEvent(ClientEvent::INCOMING_MSG, std::string(receivedMessage, numOfBytesReceived));
         }
     }
 }
